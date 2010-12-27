@@ -82,7 +82,9 @@ void init_simulator()
   // Set things to NULL to make sure we don't de-reference them
   // without a seg. fault.
   g_system_ptr = NULL;
-  // g_debug_ptr = NULL;
+#if RUBY_DEBUG
+  g_debug_ptr = NULL;
+#endif
   g_eventQueue_ptr = NULL;
   
   cout << "Ruby Timing Mode" << endl;
@@ -120,9 +122,11 @@ void init_simulator()
     srandom(string_to_int(g_param_ptr->RANDOM_SEED()));
   }
 
+#if RUBY_DEBUG
   cout << "Setting up debugging..." << endl;
-  // g_debug_ptr = new Debug();
+  g_debug_ptr = new Debug;
   cout << "Setting up debugging...done" << endl;
+#endif
 
   cout << "Creating event queue..." << endl;
   g_eventQueue_ptr = new EventQueue;
@@ -152,6 +156,8 @@ void destroy_simulator()
   delete g_eventQueue_ptr;
   cout << "Deleting event queue...done" << endl;
 
-  // delete g_debug_ptr;
+#if RUBY_DEBUG
+  delete g_debug_ptr;
+#endif
   delete g_param_ptr;
 }
