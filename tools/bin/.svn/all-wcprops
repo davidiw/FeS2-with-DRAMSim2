@@ -1,0 +1,23 @@
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/pub/svn/FeS2/!svn/ver/30/trunk/tools/bin
+END
+cxxtestgen.py
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/pub/svn/FeS2/!svn/ver/13/trunk/tools/bin/cxxtestgen.py
+END
+assemble.sh
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/pub/svn/FeS2/!svn/ver/13/trunk/tools/bin/assemble.sh
+END
+spasm.py
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/pub/svn/FeS2/!svn/ver/30/trunk/tools/bin/spasm.py
+END

@@ -1,0 +1,56 @@
+# load and configure the pyrite module
+# NOTE: MemorySizeBits is log_2(size-of-physmem)
+load-module pyrite
+@ SIM_create_object("pyrite", "mypyrite", [])
+mypyrite->Ruby = 0 # Set to 1 to enable Ruby (and multiprocessor simulation)
+mypyrite->PrintIntermediateStats = 0
+mypyrite->NumProcessors             = 1
+mypyrite->MemorySizeBits            = 29 # log_2(536870912) == log_2(512MB)
+mypyrite->DisasmFilePath            = (`os.getcwd()` + "/simpletest.dis")
+mypyrite->StatsFilePath             = (`os.getcwd()` + "/simpletest.stats.warmup")
+mypyrite->PredictorAccuracyFilePath = (`os.getcwd()` + "/simpletest.predictor.warmup")
+mypyrite->DumpFilePath              = (`os.getcwd()` + "/simpletest.dump.warmup")
+mypyrite.init
+
+#start in warmup config
+@ warmedUp = False
+@ timed = False
+
+con0.input("./simpletest\n")
+
+@ def start_timing_post(cpu, parameter):
+     conf.mypyrite.print_state = 1
+     conf.mypyrite.StatsFilePath             = (os.getcwd() + "/simpletest.stats")
+     conf.mypyrite.PredictorAccuracyFilePath = (os.getcwd() + "/simpletest.predictor")
+     conf.mypyrite.DumpFilePath              = (os.getcwd() + "/simpletest.dump")
+     conf.mypyrite.switch_to_timing = 1
+
+@ def end_simulation_post(cpu, parameter):
+     conf.mypyrite.print_state = 1
+     conf.mypyrite.break_simulation = 1
+
+# magic instr handler
+@ def magic_callback(obj, cpu, parameter):
+     global warmedUp, timed
+     if not warmedUp:
+        warmedUp = True
+        SIM_break_step(cpu, 1)
+     elif not timed:
+        timed = True
+        SIM_stacked_post(cpu, start_timing_post, None)
+     else:
+        SIM_stacked_post(cpu, end_simulation_post, None)
+
+# register aforementioned magic instr handler.
+@ SIM_hap_add_callback("Core_Magic_Instruction", magic_callback, None)
+
+# continue until the magic callback tells us to break
+pid
+c
+cpu-switch-time 1
+
+# then switch to pyrite until end of simulation
+mypyrite.run
+cpu-switch-time 1000
+
+quit

@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/pub/svn/FeS2/!svn/ver/91/trunk/test/example/simpletest
+END
+simpletest_compile.simics
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/pub/svn/FeS2/!svn/ver/80/trunk/test/example/simpletest/simpletest_compile.simics
+END
+simpletest.c
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/pub/svn/FeS2/!svn/ver/25/trunk/test/example/simpletest/simpletest.c
+END
+simpletest_notrace.simics
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/pub/svn/FeS2/!svn/ver/90/trunk/test/example/simpletest/simpletest_notrace.simics
+END
+simpletest_stats_parser.py
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/pub/svn/FeS2/!svn/ver/91/trunk/test/example/simpletest/simpletest_stats_parser.py
+END
+simpletest_trace.simics
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/pub/svn/FeS2/!svn/ver/90/trunk/test/example/simpletest/simpletest_trace.simics
+END

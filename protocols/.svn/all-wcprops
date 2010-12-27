@@ -1,0 +1,167 @@
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/pub/svn/FeS2/!svn/ver/50/trunk/protocols
+END
+MOESI_directory-cache.sm
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_directory-cache.sm
+END
+MOESI_perfect.slicc
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_perfect.slicc
+END
+parameters.sm
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/parameters.sm
+END
+MOESI_bcast-dir.sm
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_bcast-dir.sm
+END
+MOESI_hammer-cache.sm
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_hammer-cache.sm
+END
+MOESI_bcast.slicc
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_bcast.slicc
+END
+MOESI_directory_1level-cache.sm
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_directory_1level-cache.sm
+END
+MOESI_directory_simple-cache.sm
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_directory_simple-cache.sm
+END
+MOESI_directory-dir.sm
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_directory-dir.sm
+END
+MOESI_bcast-msg.sm
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_bcast-msg.sm
+END
+MOESI_token-cache.sm
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_token-cache.sm
+END
+MOESI_directory.slicc
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_directory.slicc
+END
+MOESI_hammer-dir.sm
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_hammer-dir.sm
+END
+MOESI_directory_simplest-cache.sm
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_directory_simplest-cache.sm
+END
+external.sm
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/external.sm
+END
+MOESI_hammer.slicc
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_hammer.slicc
+END
+MOESI_directory-msg.sm
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_directory-msg.sm
+END
+MOESI_perfect-cache.sm
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_perfect-cache.sm
+END
+MOESI_directory_1level.slicc
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_directory_1level.slicc
+END
+MOESI_directory_simple.slicc
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_directory_simple.slicc
+END
+MOESI_token-dir.sm
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_token-dir.sm
+END
+MOESI_bcast-cache.sm
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_bcast-cache.sm
+END
+MOESI_hammer-msg.sm
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_hammer-msg.sm
+END
+MOESI_token.slicc
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_token.slicc
+END
+MOESI_directory_simplest.slicc
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_directory_simplest.slicc
+END
+MOESI_perfect-dir.sm
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_perfect-dir.sm
+END
+MOESI_token-msg.sm
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/pub/svn/FeS2/!svn/ver/48/trunk/protocols/MOESI_token-msg.sm
+END

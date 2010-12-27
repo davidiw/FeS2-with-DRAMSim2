@@ -1,0 +1,17 @@
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/pub/svn/FeS2/!svn/ver/49/trunk/slicc/parser
+END
+parser.y
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/pub/svn/FeS2/!svn/ver/48/trunk/slicc/parser/parser.y
+END
+lexer.l
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/pub/svn/FeS2/!svn/ver/49/trunk/slicc/parser/lexer.l
+END

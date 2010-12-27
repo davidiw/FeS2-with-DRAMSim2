@@ -1,0 +1,180 @@
+#include <iostream>
+
+#include "globals.h"
+#include "TraceDecoder.h"
+
+#include "cxxtest/TestSuite.h"
+
+/* WARNING: DO NOT edit driver.cpp directly. Instead, edit driver.spasm. */
+
+using namespace std;
+
+const int BUF_SIZE = 16;
+
+class MyTestSuite : public CxxTest::TestSuite {
+private:
+  bool same(byte* insnBuf, int insnBufLength, 
+            TransOp* expectedUOpsBuf, int expectedUOpsBufLength){
+    // translate instruction
+    TraceDecoder trans(0/*rip*/);
+    trans.split_basic_block_at_locks_and_fences = 0;
+    trans.split_invalid_basic_blocks = 0;
+
+    TransOp outputBuf[BUF_SIZE];
+    bzero(outputBuf, BUF_SIZE * sizeof(TransOp));
+    trans.translate(insnBuf, insnBufLength, outputBuf);
+  
+    // check that uops are as expected
+    for (int i = 0; i < expectedUOpsBufLength; i++){
+
+      if (!expectedUOpsBuf[i].equals(outputBuf[i])){
+        cout << "Expected " << expectedUOpsBuf[i] << endl;
+        cout << "Saw " << outputBuf[i] << endl;
+        return false;
+      }
+
+    }
+    // check that there are no more uops than expected
+    TransOp zero;
+    bzero(&zero, sizeof(TransOp));
+    assert(0 == memcmp(&zero, &outputBuf[expectedUOpsBufLength], 
+                       sizeof(TransOp)));
+    return true;
+  } // end check()
+
+  bool print(byte* insnBuf, int insnBufLength){
+    // translate instruction
+    TraceDecoder trans(0/*rip*/);
+    trans.split_basic_block_at_locks_and_fences = 0;
+    trans.split_invalid_basic_blocks = 0;
+  
+    TransOp outputBuf[BUF_SIZE];
+    bzero(outputBuf, BUF_SIZE * sizeof(TransOp));
+    trans.translate(insnBuf, insnBufLength, outputBuf);
+  
+    // print uops
+    for (int i = 0; i < BUF_SIZE; i++){
+      if (0 == memcmp(&zero, &outputBuf[i], sizeof(TransOp))){
+        break;
+      }
+      cout << outputBuf[i] << endl;
+    }
+    return true;
+  } // end print()
+
+  TransOp checkerBuf[BUF_SIZE];
+  TransOp t0, t1, t2, t3, t4, t5, zero;
+
+public:
+  void setUp() { 
+    bzero(&zero, sizeof(TransOp));
+    bzero(&t0, sizeof(TransOp));
+    bzero(&t1, sizeof(TransOp));
+    bzero(&t2, sizeof(TransOp));
+    bzero(&t3, sizeof(TransOp));
+    bzero(&t4, sizeof(TransOp));
+    bzero(&t5, sizeof(TransOp));
+    bzero(checkerBuf, BUF_SIZE * sizeof(TransOp));
+    //print(ASSEMBLE("fldl 0x30(%ecx)"));
+    //print(ASSEMBLE("addsd  0x1c(%edx),%xmm4"));
+    print(ASSEMBLE("xchg %bx, %bx"));
+    print(ASSEMBLE("xchg %ebx, %ebx"));
+    cout << "*************" << endl;
+  }
+
+  void testMov(void){
+    t0 = TransOp(OP_mov, 
+                 REG_rax,  /* rd (see ptlhwdef.h for reg definitions)*/
+                 REG_none, /* ra */
+                 REG_rcx,  /* rb */
+                 REG_none, /* rc */
+                 OperandSize_FourByte);
+    // set misc other fields to correct values
+    //t0.bytes = 2; // size of x86 insn
+    //t0.som = 1; // start of micro ops for x86 instr
+    // TODO: why is eom (end of micro ops) not also set for outputBuf[0]?
+    // I think it's in the code at the end of translate() that we commented out
+    checkerBuf[0] = t0;
+    TS_ASSERT(same(ASSEMBLE("mov %ecx, %eax"), checkerBuf, 1));
+  }
+  
+  void testAdd(void){
+    t0 = TransOp(OP_add, REG_rax, REG_rax, REG_rcx, REG_none, OperandSize_FourByte);
+    t0.setflags = FLAGS_DEFAULT_ALU; // zf, cf, of
+    checkerBuf[0] = t0;
+    TS_ASSERT(same(ASSEMBLE("add %ecx, %eax"), checkerBuf, 1));
+  }
+
+  void testPxor(void){
+    t0 = TransOp(OP_xor, REG_xmml1, REG_xmml1, REG_xmml0, REG_none, OperandSize_EightByte);
+    t1 = TransOp(OP_xor, REG_xmmh1, REG_xmmh1, REG_xmmh0, REG_none, OperandSize_EightByte);
+    checkerBuf[0] = t0;
+    checkerBuf[1] = t1;
+    TS_ASSERT(same(ASSEMBLE("pxor %xmm0, %xmm1"), checkerBuf, 2));
+  }
+
+  void testLockDecb(void){
+    t0 = TransOp(OP_mf, REG_temp0, REG_none, REG_none, REG_none, 
+                 OperandSize_Byte);
+    t0.memory_fence_type = MemoryFenceType_All;
+    t1 = TransOp(OP_ld, REG_temp0, REG_rax, REG_imm, REG_none, OperandSize_Byte, 
+                 0 /* rbimm */);
+    t1.locked = 1;
+    t2 = TransOp(OP_sub, REG_temp0, REG_temp0, REG_imm, REG_none, 
+                 OperandSize_Byte, 
+                 1 /* rbimm */);
+    t2.setflags = SETFLAG_ZF | SETFLAG_OF;
+    t3 = TransOp(OP_st, REG_mem, REG_rax, REG_imm, REG_temp0, OperandSize_Byte, 
+                 0 /* rbimm */);
+    t3.locked = 1;
+    t4 = TransOp(OP_mf, REG_temp0, REG_none, REG_none, REG_none, OperandSize_Byte);
+    t4.memory_fence_type = MemoryFenceType_All;
+    checkerBuf[0] = t0;
+    checkerBuf[1] = t1;
+    checkerBuf[2] = t2;
+    checkerBuf[3] = t3;
+    checkerBuf[4] = t4;
+    TS_ASSERT(same(ASSEMBLE("lock decb (%eax)"), checkerBuf, 5));
+  }
+
+  void testPushSegment(void){
+    // fake uop
+    t0 = TransOp(OP_add, REG_rax, REG_rax, REG_rcx, REG_none, OperandSize_FourByte);
+    t0.setflags = FLAGS_DEFAULT_ALU; // zf, cf, of
+    checkerBuf[0] = t0;
+    TS_ASSERT_THROWS(same(ASSEMBLE(".byte 0x1e /*push %ds*/"), checkerBuf, 1), InvalidOpcodeException);
+  }
+
+  void testFist(void){
+    // WEIRD: it seems like he actually handles below instruction
+    // we'll have to do something about this at some point...
+    //TS_ASSERT(print(ASSEMBLE("fist (%eax)")));
+  }
+
+  void testIncompleteInsn0(void){
+    TS_ASSERT_THROWS(same((byte*) "\0xcd", 1, checkerBuf, 1), NotEnoughBytesException);
+  }
+
+  void testIncompleteInsn1(void){
+    TS_ASSERT_THROWS(same((byte*) "", 0, checkerBuf, 1), NotEnoughBytesException);
+  }
+
+  void testSyscall(void){
+    t0 = TransOp(OP_add, REG_rax, REG_rax, REG_rcx, REG_none, OperandSize_FourByte);
+    checkerBuf[0] = t0;
+    // currently implemented via microcode assist
+    TS_ASSERT_THROWS(same(ASSEMBLE("int $0x80"), checkerBuf, 1), UnimplementedOpcodeException);
+  }
+
+  void testMultipleInsns(void){
+    // x40 == inc %eax
+    // x4b == dec %ebx
+    /* Only the inc insn should get cracked. */
+    t0 = TransOp(OP_add, REG_rax, REG_rax, REG_imm, REG_none, OperandSize_FourByte, 1 /*rbimm*/);
+    t0.setflags = SETFLAG_ZF | SETFLAG_OF;
+    checkerBuf[0] = t0;
+    checkerBuf[1] = zero;
+    TS_ASSERT(same((byte*) "\x40\x4b", 2, checkerBuf, 2));
+  }
+
+};

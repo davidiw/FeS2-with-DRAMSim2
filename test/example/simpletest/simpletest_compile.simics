@@ -1,0 +1,4 @@
+con0.input("mount /host\n")
+con0.input("cp /host" + `os.getcwd()` + "/simpletest.c .\n")
+con0.input("umount /host\n")
+con0.input("gcc -o simpletest simpletest.c\n")

@@ -1,0 +1,60 @@
+[
+##     {'kind': 'DEBUG_CATEGORY', # currently, only 'DEBUG_CATEGORY' is valid
+##      'name': 'theNameOfTheCategory', # must be a valid C identifier
+##      'shortcut': 's', # a single-character shortcut for this category
+##      'color': str # red, green, white, cyan, blue, magenta or yellow
+##      } 
+
+    # In addition to the shortcuts listed here, the '#' (sh) character
+    # turns OFF all debug messaging, and the '*' (all) character turns
+    # ON all debug messaging.
+    
+    {'global': True,
+     'defType': 'DebugCategory'},
+
+    {'kind': 'DEBUG_CATEGORY',
+     'name': 'DEBUG_VALIDATION',
+     'shortcut': 'v',
+     'color' : 'red' },
+
+    {'kind': 'DEBUG_CATEGORY',
+     'name': 'DEBUG_UOP',
+     'shortcut': 'u',
+     'color' : 'cyan' },
+
+    {'kind': 'DEBUG_CATEGORY',
+     'name': 'DEBUG_X86INSN',
+     'shortcut': 'x',
+     'color' : 'green' },
+
+    {'kind': 'DEBUG_CATEGORY',
+     'name': 'DEBUG_INVALID_OPCODE',
+     'shortcut': 'n',
+     'color' : 'magenta' },
+
+    {'kind': 'DEBUG_CATEGORY',
+     'name': 'DEBUG_UNIMPLEMENTED_OPCODE',
+     'shortcut': 'o',
+     'color' : 'magenta' },
+
+    {'kind': 'DEBUG_CATEGORY',
+     'name': 'DEBUG_INTERRUPT',
+     'shortcut': 'i',
+     'color' : 'white' },
+
+    {'kind': 'DEBUG_CATEGORY',
+     'name': 'DEBUG_EXCEPTION',
+     'shortcut': 'e',
+     'color' : 'white' },
+
+    {'kind': 'DEBUG_CATEGORY',
+     'name': 'DEBUG_SIM_REQUEST',
+     'shortcut': 'r',
+     'color' : 'yellow' },
+
+    {'kind': 'DEBUG_CATEGORY',
+     'name': 'DEBUG_MEMORY',
+     'shortcut': 'm',
+     'color' : 'blue' }
+
+]

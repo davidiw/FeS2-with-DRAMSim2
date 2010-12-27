@@ -1,0 +1,110 @@
+// -----------------------------------------------------------------------------
+//
+//  This file is part of FeS2.
+//
+//  FeS2 is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  FeS2 is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with FeS2.  If not, see <http://www.gnu.org/licenses/>.
+//
+// -----------------------------------------------------------------------------
+
+from cli import *
+
+pyrite_obj_name = "pyrite0"
+pyrite_class_name = "pyrite"
+
+def new_pyrite():
+       try:
+              SIM_get_object(pyrite_obj_name)
+              print "%s '%s' already exists." % (pyrite_class_name, pyrite_obj_name)
+              SIM_command_has_problem()
+              return
+       except:
+              pass
+       try:
+              SIM_create_object(pyrite_class_name, pyrite_obj_name, [])
+       except:
+              print "Failed creating %s object '%s'." % (pyrite_class_name, pyrite_obj_name)
+              SIM_command_has_problem()
+new_command("new-pyrite", new_pyrite,
+            [],
+            type = [pyrite_class_name],
+            short = "create a new pyrite object")
+       
+def pyrite_step_cycle(pyrite_obj, num_cycles):
+  pyrite_obj.step_cycle = num_cycles
+new_command("step-cycle", pyrite_step_cycle,
+            args = [arg(int_t, "n", "?", 1)],
+            alias = "sc",
+            type = pyrite_class_name,
+            namespace = pyrite_class_name,
+            short = "step n pyrite cycles (step 1 cycle if no argument is given)")
+
+def pyrite_run(pyrite_obj):
+  pyrite_obj.run = 1
+new_command("run", pyrite_run,
+            args = [],
+            type = pyrite_class_name,
+            namespace = pyrite_class_name,
+            short = "run pyrite")
+
+def pyrite_switch_to_timing(pyrite_obj):
+  pyrite_obj.switch_to_timing = 1
+new_command("switch-to-timing", pyrite_switch_to_timing,
+            args = [],
+            type = pyrite_class_name,
+            namespace = pyrite_class_name,
+            short = "switch to timing simulation mode")
+
+def pyrite_switch_to_warmup(pyrite_obj):
+  pyrite_obj.switch_to_warmup = 1
+new_command("switch-to-warmup", pyrite_switch_to_warmup,
+            args = [],
+            type = pyrite_class_name,
+            namespace = pyrite_class_name,
+            short = "switch to warmup simulation mode")
+
+def pyrite_switch_to_functional(pyrite_obj):
+  pyrite_obj.switch_to_functional = 1
+new_command("switch-to-functional", pyrite_switch_to_functional,
+            args = [],
+            type = pyrite_class_name,
+            namespace = pyrite_class_name,
+            short = "switch to functional simulation mode")
+
+def pyrite_init(pyrite_obj):
+  pyrite_obj.init = 1
+new_command("init", pyrite_init,
+            args = [],
+            type = pyrite_class_name,
+            namespace = pyrite_class_name,
+            short = "init pyrite")
+
+def pyrite_print(pyrite_obj):
+  pyrite_obj.print_state = 1
+new_command("print", pyrite_print,
+            args = [],
+            type = pyrite_class_name,
+            namespace = pyrite_class_name,
+            short = "print pyrite stats")
+
+def setDebugCategories(newCats):
+  conf.pyrite0.DebugCategory = newCats     
+new_command("pyrite-set-debug-categories", setDebugCategories,
+            args  = [arg(str_t, "categories")],
+            alias = "dbc",
+            type  = "pyrite-commands",
+            short = "set the debug categories",
+            doc = """
+<b>pyrite-set-debug-categories</b> activate the supplied debug categories
+#include "debug_cat_help.inc"
+""")

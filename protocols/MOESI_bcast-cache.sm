@@ -1,0 +1,1182 @@
+/* This file is part of SLICC (Specification Language for Implementing
+   Cache Coherence), a component of the Multifacet GEMS (General
+   Execution-driven Multiprocessor Simulator) software toolset
+   originally developed at the University of Wisconsin-Madison.
+
+   SLICC was originally developed by Milo Martin with substantial
+   contributions from Daniel Sorin.
+
+   Ruby was originally developed primarily by Milo Martin and Daniel
+   Sorin with contributions from Ross Dickson, Carl Mauer, and Manoj
+   Plakal.
+
+   Substantial further development of Multifacet GEMS at the
+   University of Wisconsin was performed by Alaa Alameldeen, Brad
+   Beckmann, Ross Dickson, Pacia Harper, Milo Martin, Michael Marty,
+   Carl Mauer, Kevin Moore, Manoj Plakal, Daniel Sorin, Min Xu, and
+   Luke Yen.
+
+   Additional development was performed at the University of
+   Pennsylvania by Milo Martin.
+
+   --------------------------------------------------------------------
+
+   Copyright (C) 1999-2005 by Mark D. Hill and David A. Wood for the
+   Wisconsin Multifacet Project.  Contact: gems@cs.wisc.edu
+   http://www.cs.wisc.edu/gems/
+
+   This file is based upon a pre-release version of Multifacet GEMS
+   from 2004 and may also contain additional modifications and code
+   Copyright (C) 2004-2007 by Milo Martin for the Penn Architecture
+   and Compilers Group.  Contact: acg@lists.seas.upenn.edu
+   http://www.cis.upenn.edu/acg/
+
+   --------------------------------------------------------------------
+
+   Multifacet GEMS is free software; you can redistribute it and/or
+   modify it under the terms of version 2 of the GNU General Public
+   License as published by the Free Software Foundation.  This 
+   software comes with ABSOLUTELY NO WARRANTY.  For details see the 
+   file LICENSE included with the distribution.
+*/
+// -----------------------------------------------------------------------------
+//
+//  This file is part of FeS2.
+//
+//  FeS2 is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  FeS2 is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with FeS2.  If not, see <http://www.gnu.org/licenses/>.
+//
+// -----------------------------------------------------------------------------
+
+machine(L1Cache, "MOSI Broadcast Optimized") {
+
+  // STATES
+
+  enumeration(State, desc="Cache states", default="L1Cache_State_I") {
+    NP,    "NP",    desc="Not Present";
+    I,     "I",     desc="Idle";
+    S,     "S",     desc="Shared";
+    O,     "O",     desc="Owned";
+    M,     "M",     desc="Modified (dirty)";
+    MM,    "MM",    desc="Modified (dirty and locally modified)";
+    M_W,   "M^W",   desc="Modified (dirty), waiting";
+    MM_W,  "MM^W",  desc="Modified (dirty and locally modified), waiting";
+
+    IS_AD, "IS^AD", desc="idle, issued GETS, have not seen GETS or data yet";
+    IM_AD, "IM^AD", desc="idle, issued GETX, have not seen GETX or data yet";
+    SM_AD, "SM^AD", desc="shared, issued GETX, have not seen GETX or data yet";
+    OM_A,  "OM^A",  desc="owned, issued GETX, have not seen GETX yet";
+
+    IS_A,  "IS^A",  desc="idle, issued GETS, have not seen GETS, have seen data";
+    IM_A,  "IM^A",  desc="idle, issued GETS, have not seen GETS, have seen exclusive data";
+    IMM_A, "IMM^A",  desc="idle, issued GETX, have not seen GETX, have seen data";
+    SM_A,  "SM^A",  desc="shared, issued GETX, have not seen GETX, have seen data";
+
+    IS_D,  "IS^D",  desc="idle, issued GETS, have seen GETS, have not seen data yet";
+    IM_D,  "IM^D",  desc="idle, issued GETX, have seen GETX, have not seen data yet";
+    SM_D,  "SM^D",  desc="shared, issued GETX, have seen GETX, have not seen data yet";
+
+    MI_AD, "MI^AD", desc="modified, issued PUT, have not seen PUT yet";
+    OI_AD, "OI^AD", desc="owned, issued PUT, have not seen PUT yet";
+    II_AD, "II^AD", desc="modified, issued PUT, have not seen PUT, then saw other GETX";
+
+    MI_A,  "MI^A",  desc="modified, issued PUT, have not seen PUT yet, but we saw the ack";
+    OI_A,  "OI^A",  desc="owned, issued PUT, have not seen PUT yet, but we saw the ack";
+    II_A,  "II^A",  desc="modified, issued PUT, have not seen PUT, then saw other GETX, but we saw the ack";
+
+    MI_D,  "MI^D",  desc="modified, issued PUT, have seen PUT, waiting for ack";
+    OI_D,  "OI^D",  desc="owned, issued PUT, have seen PUT, waiting for ack";
+    II_D,  "II^D",  desc="modified, issued PUT, saw other GETX, then saw PUT, waiting for ack";
+  }
+
+  // ** EVENTS **
+  
+  enumeration(Event, desc="Cache events") {
+    // From processor
+    Load,            desc="Load request from the processor";
+    Ifetch,          desc="I-fetch request from the processor";
+    Store,           desc="Store request from the processor";
+    L2_Replacement,  desc="L2 Replacement";
+    L1_to_L2,        desc="L1 to L2 transfer";
+    L2_to_L1D,       desc="L2 to L1-Data transfer";
+    L2_to_L1I,       desc="L2 to L1-Instruction transfer";
+
+    // From Address network
+    Own_GETX,        desc="Occurs when we observe our own GETX request in the global order";
+    Own_GETS,        desc="Occurs when we observe our own GETS request in the global order";
+    Own_PUT,         desc="Occurs when we observe our own PUT request in the global order";
+    Other_GETX,      desc="Occurs when we observe a GETX request from another processor";
+    Other_GETS,      desc="Occurs when we observe a GETS request from another processor";
+    Other_PUT,       desc="Occurs when we observe a PUT request from another processor";
+
+    // From Data network
+    Data,            desc="Data for this block from the data network";
+    Exclusive_Data,  desc="Exclusive data for this block from the data network"; // Only for GETS
+    WB_Ack,          desc="Writeback ack, signals we should proceed with the writeback process";
+
+    // Triggers
+    Timeout,         desc="Timeout"; 
+  }
+
+  // TYPES 
+
+  // CacheEntry
+  structure(Entry, interface="CacheEntryBase", desc="...") {
+    Address Address,         desc="Address of this block, required by CacheMemory";
+    Time LastRef,            desc="Last time this block was referenced, required by CacheMemory";
+    AccessPermission Permission, desc="Access permission for this block, required by CacheMemory"; 
+    DataBlock DataBlk,       desc="data for the block, required by CacheMemory";
+    State CacheState,       desc="cache state";
+    bool Dirty,             desc="Is the data dirty (different than memory)?";
+  }
+
+  // TBE fields
+  structure(TBE, interface="EntryBase", desc="...") {
+    State TBEState,         desc="Transient state";
+    DataBlock DataBlk,      desc="Buffer for the data block";
+    bool Dirty,             desc="Is the data dirty (different than memory)?";
+  }
+
+  external_type(CacheMemory) {
+    bool cacheAvail(Address);
+    Address cacheProbe(Address);
+    void allocate(Address);
+    void deallocate(Address);
+    Entry lookup(Address), cast_hack="yes";
+    void changePermission(Address, AccessPermission);
+    bool isTagPresent(Address);
+  }
+
+  external_type(TBETable) {
+    TBE lookup(Address), cast_hack="yes";
+    void allocate(Address);
+    void deallocate(Address);
+    bool isPresent(Address);
+  }
+
+  TBETable TBEs, constructor_hack='L1Cache_TBE()';
+  CacheMemory L1IcacheMemory, constructor_hack='L1Cache_Entry(),g_param_ptr->L1_CACHE_NUM_SETS_BITS(),g_param_ptr->L1_CACHE_ASSOC(),"L1I"';
+  CacheMemory L1DcacheMemory, constructor_hack='L1Cache_Entry(),g_param_ptr->L1_CACHE_NUM_SETS_BITS(),g_param_ptr->L1_CACHE_ASSOC(),"L1D"';
+  CacheMemory L2cacheMemory, constructor_hack='L1Cache_Entry(),g_param_ptr->L2_CACHE_NUM_SETS_BITS(),g_param_ptr->L2_CACHE_ASSOC(),"L2"';
+
+  Entry getCacheEntry(Address addr), return_by_ref="yes" {
+    if (L2cacheMemory.isTagPresent(addr)) {
+      return L2cacheMemory[addr];
+    } else if (L1DcacheMemory.isTagPresent(addr)) {
+      return L1DcacheMemory[addr];
+    } else {
+      return L1IcacheMemory[addr];
+    }
+  }
+
+  void changePermission(Address addr, AccessPermission permission) {
+    if (L2cacheMemory.isTagPresent(addr)) {
+      return L2cacheMemory.changePermission(addr, permission);
+    } else if (L1DcacheMemory.isTagPresent(addr)) {
+      return L1DcacheMemory.changePermission(addr, permission);
+    } else {
+      return L1IcacheMemory.changePermission(addr, permission);
+    }
+  }
+
+  bool isCacheTagPresent(Address addr) {
+    return (L2cacheMemory.isTagPresent(addr) || L1DcacheMemory.isTagPresent(addr) || L1IcacheMemory.isTagPresent(addr));
+  }
+
+  State getState(Address addr) {
+    assert((L1DcacheMemory.isTagPresent(addr) && L1IcacheMemory.isTagPresent(addr)) == false);
+    assert((L1IcacheMemory.isTagPresent(addr) && L2cacheMemory.isTagPresent(addr)) == false);
+    assert((L1DcacheMemory.isTagPresent(addr) && L2cacheMemory.isTagPresent(addr)) == false);
+
+    if(TBEs.isPresent(addr)) { 
+      return TBEs[addr].TBEState;
+    } else if (isCacheTagPresent(addr)) {
+      return getCacheEntry(addr).CacheState;
+    }
+    return State:NP;
+  }
+
+  void setState(Address addr, State state) {
+    assert((L1DcacheMemory.isTagPresent(addr) && L1IcacheMemory.isTagPresent(addr)) == false);
+    assert((L1IcacheMemory.isTagPresent(addr) && L2cacheMemory.isTagPresent(addr)) == false);
+    assert((L1DcacheMemory.isTagPresent(addr) && L2cacheMemory.isTagPresent(addr)) == false);
+
+    if (TBEs.isPresent(addr)) {
+      TBEs[addr].TBEState := state;
+    }
+
+    if (isCacheTagPresent(addr)) {
+      getCacheEntry(addr).CacheState := state;
+    
+      // Set permission
+      if (state == State:MM || state == State:MM_W) {
+        changePermission(addr, AccessPermission:Read_Write);
+      } else if ((state == State:S) || 
+                 (state == State:O) || 
+                 (state == State:M) || 
+                 (state == State:M_W) ||
+                 (state == State:SM_AD) || 
+                 (state == State:SM_A) || 
+                 (state == State:SM_D) || 
+                 (state == State:OM_A)) {
+        changePermission(addr, AccessPermission:Read_Only);
+      } else {
+        changePermission(addr, AccessPermission:Invalid);
+      }
+    }
+  }
+
+  Event mandatory_request_type_to_event(CacheRequestType type) {
+    if (type == CacheRequestType:LD) {
+      return Event:Load;
+    } else if (type == CacheRequestType:IFETCH) {
+      return Event:Ifetch;
+    } else if ((type == CacheRequestType:ST) || (type == CacheRequestType:ATOMIC)) {
+      return Event:Store;
+    } else {
+      error("Invalid CacheRequestType");
+    }
+  }
+
+  // ** BUFFERS **
+
+  MessageBuffer addressFromCache, network="To", virtual_network="0", ordered="false";
+  MessageBuffer dataFromCache, network="To", virtual_network="1", ordered="false";
+
+  MessageBuffer addressToCache, network="From", virtual_network="0", ordered="true";
+  MessageBuffer dataToCache, network="From", virtual_network="1", ordered="false";
+
+  MessageBuffer triggerQueue, ordered="false", random="false";
+  MessageBuffer requestQueue, ordered="false";
+
+  // ** OUT_PORTS **
+
+  out_port(dataNetwork_out, DataMsg, dataFromCache);
+  out_port(addressNetwork_out, AddressMsg, addressFromCache);
+  out_port(triggerQueue_out, TriggerMsg, triggerQueue);
+
+  // ** IN_PORTS **
+
+  // Trigger Queue
+  in_port(triggerQueue_in, TriggerMsg, triggerQueue) {
+    if (triggerQueue_in.isReady()) {
+      peek(triggerQueue_in, TriggerMsg) {
+        if (in_msg.Type == TriggerType:TIMEOUT) {
+          trigger(Event:Timeout, in_msg.Address);
+        } else {
+          error("Unexpected message");
+        }
+      }
+    }
+  }
+
+  // Data Network
+  in_port(dataNetwork_in, DataMsg, dataToCache) {
+    if (dataNetwork_in.isReady()) {
+      peek(dataNetwork_in, DataMsg) {
+        if (in_msg.Type == CoherenceResponseType:DATA) {
+          trigger(Event:Data, in_msg.Address);
+        } else if (in_msg.Type == CoherenceResponseType:EXCLUSIVE_DATA) {
+          trigger(Event:Exclusive_Data, in_msg.Address);
+        } else if (in_msg.Type == CoherenceResponseType:WB_ACK) {
+          trigger(Event:WB_Ack, in_msg.Address);
+        } else {
+          error("Unexpected message");
+        }
+      }
+    }
+  }
+
+  // Address Network
+  in_port(addressNetwork_in, AddressMsg, addressToCache) {
+    if (addressNetwork_in.isReady()) {
+      peek(addressNetwork_in, AddressMsg) {
+        if (in_msg.Type == CoherenceRequestType:GETS) {
+          if (in_msg.Requestor == id) {
+            trigger(Event:Own_GETS, in_msg.Address);
+          } else {
+            trigger(Event:Other_GETS, in_msg.Address);
+          }
+        } else if (in_msg.Type == CoherenceRequestType:GETX) {
+          if (in_msg.Requestor == id) {
+            trigger(Event:Own_GETX, in_msg.Address);    
+          } else {
+            trigger(Event:Other_GETX, in_msg.Address);
+          }
+        } else if (in_msg.Type == CoherenceRequestType:PUT) {
+          if (in_msg.Requestor == id) {
+            trigger(Event:Own_PUT, in_msg.Address);    
+          } else {
+            trigger(Event:Other_PUT, in_msg.Address);
+          }
+        } else {
+          error("Unexpected message");
+        }
+      }
+    }
+  }
+
+  // Mandatory Queue
+  in_port(mandatoryQueue_in, CacheMsg, requestQueue, desc="...") {
+    if (mandatoryQueue_in.isReady()) {
+      peek(mandatoryQueue_in, CacheMsg) {
+
+        // Check for data access to blocks in I-cache and ifetchs to blocks in D-cache
+
+        if (in_msg.Type == CacheRequestType:IFETCH) {
+          // ** INSTRUCTION ACCESS ***
+
+          // Check to see if it is in the OTHER L1
+          if (L1DcacheMemory.isTagPresent(in_msg.Address)) {
+            // The block is in the wrong L1, try to write it to the L2
+            if (L2cacheMemory.cacheAvail(in_msg.Address)) {
+              trigger(Event:L1_to_L2, in_msg.Address);
+            } else {
+              trigger(Event:L2_Replacement, L2cacheMemory.cacheProbe(in_msg.Address));
+            }
+          } else if (L1IcacheMemory.isTagPresent(in_msg.Address)) { 
+            // The tag matches for the L1, so the L1 fetches the line.  We know it can't be in the L2 due to exclusion
+            trigger(mandatory_request_type_to_event(in_msg.Type), in_msg.Address);
+          } else {
+            // not in any L1
+            if (L1IcacheMemory.cacheAvail(in_msg.Address)) {
+              // L1 does't have the line, but we have space for it in the L1
+              if (L2cacheMemory.isTagPresent(in_msg.Address)) {
+                // L2 has it (maybe not with the right permissions)
+                trigger(Event:L2_to_L1I, in_msg.Address);
+              } else {
+                // We have room, the L2 doesn't have it, so the L1 fetches the line
+                trigger(mandatory_request_type_to_event(in_msg.Type), in_msg.Address);
+              }
+            } else {
+              // No room in the L1, so we need to make room
+              if (L2cacheMemory.cacheAvail(L1IcacheMemory.cacheProbe(in_msg.Address))) {
+                // The L2 has room, so we move the line from the L1 to the L2
+                trigger(Event:L1_to_L2, L1IcacheMemory.cacheProbe(in_msg.Address));
+              } else {
+                // The L2 does not have room, so we replace a line from the L2
+                trigger(Event:L2_Replacement, L2cacheMemory.cacheProbe(L1IcacheMemory.cacheProbe(in_msg.Address)));
+              }
+            }
+          }
+        } else {
+          // *** DATA ACCESS ***
+
+          // Check to see if it is in the OTHER L1
+          if (L1IcacheMemory.isTagPresent(in_msg.Address)) {
+            // The block is in the wrong L1, try to write it to the L2
+            if (L2cacheMemory.cacheAvail(in_msg.Address)) {
+              trigger(Event:L1_to_L2, in_msg.Address);
+            } else {
+              trigger(Event:L2_Replacement, L2cacheMemory.cacheProbe(in_msg.Address));
+            }
+          } else if (L1DcacheMemory.isTagPresent(in_msg.Address)) { 
+            // The tag matches for the L1, so the L1 fetches the line.  We know it can't be in the L2 due to exclusion
+            trigger(mandatory_request_type_to_event(in_msg.Type), in_msg.Address);
+          } else {
+            // not in any L1
+            if (L1DcacheMemory.cacheAvail(in_msg.Address)) {
+              // L1 does't have the line, but we have space for it in the L1
+              if (L2cacheMemory.isTagPresent(in_msg.Address)) {
+                // L2 has it (maybe not with the right permissions)
+                trigger(Event:L2_to_L1D, in_msg.Address);
+              } else {
+                // We have room, the L2 doesn't have it, so the L1 fetches the line
+                trigger(mandatory_request_type_to_event(in_msg.Type), in_msg.Address);
+              }
+            } else {
+              // No room in the L1, so we need to make room
+              if (L2cacheMemory.cacheAvail(L1DcacheMemory.cacheProbe(in_msg.Address))) {
+                // The L2 has room, so we move the line from the L1 to the L2
+                trigger(Event:L1_to_L2, L1DcacheMemory.cacheProbe(in_msg.Address));
+              } else {
+                // The L2 does not have room, so we replace a line from the L2
+                trigger(Event:L2_Replacement, L2cacheMemory.cacheProbe(L1DcacheMemory.cacheProbe(in_msg.Address)));
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // ACTIONS
+  action(a_allocateTBE, "a", desc="Allocate TBE with Address=B, ForwardID=null, RetryCount=zero, ForwardIDRetryCount=zero, ForwardProgressBit=unset.") {
+    check_allocate(TBEs);
+    TBEs.allocate(address);
+
+    // Keep the TBE state consistent with the cache state
+    if (isCacheTagPresent(address)) {
+      TBEs[address].TBEState := getCacheEntry(address).CacheState;
+    }
+  }
+
+  action(b_sendWritebackData, "b", desc="Send writeback data") {
+    enqueue(dataNetwork_out, DataMsg, CACHE_LATENCY) {
+      out_msg.Address := address;
+      out_msg.Sender := id;
+      out_msg.Destination.add(MachineType:Directory, map_address_to_node(address));  // To memory 
+      out_msg.Dirty := TBEs[address].Dirty;
+      if (TBEs[address].Dirty) {
+        out_msg.Type := CoherenceResponseType:WB_DIRTY;
+        out_msg.DataBlk := TBEs[address].DataBlk;
+        out_msg.MessageSize := MessageSizeType:Writeback_Data;
+      } else {
+        out_msg.Type := CoherenceResponseType:WB_CLEAN;
+        // NOTE: in a real system this would not send data.  We send
+        // data here only so we can check it at the memory
+        out_msg.DataBlk := TBEs[address].DataBlk; 
+        out_msg.MessageSize := MessageSizeType:Writeback_Control;
+      }
+    }
+  }
+
+  action(bb_sendWritebackExclusiveData, "\b", desc="Send writeback of exclusive data") {
+    enqueue(dataNetwork_out, DataMsg, CACHE_LATENCY) {
+      out_msg.Address := address;
+      out_msg.Sender := id;
+      out_msg.Destination.add(MachineType:Directory, map_address_to_node(address));  // To memory 
+      out_msg.Dirty := TBEs[address].Dirty;
+      if (TBEs[address].Dirty) {
+        out_msg.Type := CoherenceResponseType:WB_EXCLUSIVE_DIRTY;
+        out_msg.DataBlk := TBEs[address].DataBlk;
+        out_msg.MessageSize := MessageSizeType:Writeback_Data;
+      } else {
+        out_msg.Type := CoherenceResponseType:WB_EXCLUSIVE_CLEAN;
+        // NOTE: in a real system this would not send data.  We send
+        // data here only so we can check it at the memory
+        out_msg.DataBlk := TBEs[address].DataBlk; 
+        out_msg.MessageSize := MessageSizeType:Writeback_Control;
+      }
+    }
+  }
+ 
+  action(c_allocateL1DCacheBlock, "c", desc="Set L1 D-cache tag equal to tag of block B.") {
+    if (L1DcacheMemory.isTagPresent(address) == false) {
+      L1DcacheMemory.allocate(address);
+    }
+  }
+
+  action(c_allocateL1ICacheBlock, "c'", desc="Set L1 I-cache tag equal to tag of block B.") {
+    if (L1IcacheMemory.isTagPresent(address) == false) {
+      L1IcacheMemory.allocate(address);
+    }
+  }
+
+  action(cc_allocateL2CacheBlock, "\c", desc="Set L2 cache tag equal to tag of block B.") {
+    L2cacheMemory.allocate(address);
+  }
+
+  action(d_deallocateTBE, "d", desc="Deallocate TBE.") {
+    TBEs.deallocate(address);
+  }
+
+  action(e_sendWritebackNack, "e", desc="Send writeback nack") {
+    enqueue(dataNetwork_out, DataMsg, CACHE_LATENCY) {
+      out_msg.Address := address;
+      out_msg.Type := CoherenceResponseType:WB_NACK;
+      out_msg.Sender := id;
+      out_msg.Destination.add(MachineType:Directory, map_address_to_node(address));  // To memory 
+      out_msg.MessageSize := MessageSizeType:Writeback_Control;
+    }
+  }
+
+  action(f_issueGETS, "f", desc="Issue GETS.") {
+    enqueue(addressNetwork_out, AddressMsg, ISSUE_LATENCY) {
+      out_msg.Address := address;
+      out_msg.Type := CoherenceRequestType:GETS;
+      out_msg.Requestor := id;
+      out_msg.Destination.broadcast(MachineType:L1Cache);
+      out_msg.Destination.add(MachineType:Directory, map_address_to_node(address));  // To memory 
+      out_msg.MessageSize := MessageSizeType:Request_Control;
+    }
+  }
+
+  action(g_issueGETX, "g", desc="Issue GETX.") {
+    enqueue(addressNetwork_out, AddressMsg, ISSUE_LATENCY) {
+      out_msg.Address := address;
+      out_msg.Type := CoherenceRequestType:GETX;
+      out_msg.Requestor := id;
+      out_msg.Destination.broadcast(MachineType:L1Cache);
+      out_msg.Destination.add(MachineType:Directory, map_address_to_node(address));  // To memory 
+      out_msg.MessageSize := MessageSizeType:Request_Control;
+    }
+  }
+
+  action(h_load_hit, "h", desc="Notify sequencer the load completed.") {
+    DEBUG_EXPR(getCacheEntry(address).DataBlk);
+    get_sequencer(id).readCallback(address, getCacheEntry(address).DataBlk);
+  }
+
+  action(hh_store_hit, "\h", desc="Notify sequencer that store completed.") {
+    DEBUG_EXPR(getCacheEntry(address).DataBlk);
+    get_sequencer(id).writeCallback(address, getCacheEntry(address).DataBlk);
+    getCacheEntry(address).Dirty := true;
+  }
+
+  action(i_popAddressQueue, "i", desc="Pop incoming address queue.") {
+    addressNetwork_in.dequeue();
+  }
+
+  action(j_popDataQueue, "j", desc="Pop incoming data queue.") {
+    dataNetwork_in.dequeue();
+  }
+
+  action(k_popMandatoryQueue, "k", desc="Pop mandatory queue.") {
+    mandatoryQueue_in.dequeue();
+  }
+
+  action(l_popTriggerQueue, "l", desc="Pop trigger queue.") {
+    triggerQueue_in.dequeue();
+  }
+
+  action(m_deallocateL1CacheBlock, "m", desc="Deallocate L1 cache block.  Sets the cache to not present, allowing a replacement in parallel with a fetch.") {
+    if (L1DcacheMemory.isTagPresent(address)) {
+      L1DcacheMemory.deallocate(address);
+    } else {
+      L1IcacheMemory.deallocate(address);
+    }
+  }
+
+  action(mm_deallocateL2CacheBlock, "\m", desc="Deallocate L2 cache block.  Sets the cache to not present, allowing a replacement in parallel with a fetch.") {
+    L2cacheMemory.deallocate(address);
+  }
+  
+  action(n_copyFromL1toL2, "n", desc="Copy data block from L1 (I or D) to L2") {
+    if (L1DcacheMemory.isTagPresent(address)) {
+      L2cacheMemory[address] := L1DcacheMemory[address];
+    } else {
+      L2cacheMemory[address] := L1IcacheMemory[address];
+    }
+  }
+  
+  action(nn_copyFromL2toL1, "\n", desc="Copy data block from L2 to L1 (I or D)") {
+    if (L1DcacheMemory.isTagPresent(address)) {
+      L1DcacheMemory[address] := L2cacheMemory[address];
+    } else {
+      L1IcacheMemory[address] := L2cacheMemory[address];
+    }
+  }
+
+  action(o_scheduleTimeout, "o", desc="Schedule a timeout") {
+    enqueue(triggerQueue_out, TriggerMsg, 15) { // Some time to use the line
+      out_msg.Address := address;
+      out_msg.Type := TriggerType:TIMEOUT;
+    }
+  }
+
+  action(p_issuePUT, "p", desc="Issue PUT.") {
+    enqueue(addressNetwork_out, AddressMsg, ISSUE_LATENCY) {
+      out_msg.Address := address;
+      out_msg.Type := CoherenceRequestType:PUT;
+      out_msg.Requestor := id;
+      out_msg.Destination.add(MachineType:Directory, map_address_to_node(address));  // To memory 
+      out_msg.Destination.add(MachineType:L1Cache, id);  // Back to us
+      out_msg.MessageSize := MessageSizeType:Writeback_Control;
+    }
+  }
+
+  action(q_writeDataFromCacheToTBE, "q", desc="Write data from the cache into the TBE.") {
+    TBEs[address].DataBlk := getCacheEntry(address).DataBlk;
+    TBEs[address].Dirty := getCacheEntry(address).Dirty;
+    DEBUG_EXPR(TBEs[address].DataBlk);
+  }
+
+  action(r_cacheToRequestor, "r", desc="Send data from the cache to the requestor") {
+    peek(addressNetwork_in, AddressMsg) {
+      enqueue(dataNetwork_out, DataMsg, CACHE_LATENCY) {
+        out_msg.Address := address;
+        out_msg.Type := CoherenceResponseType:DATA;
+        out_msg.Sender := id;
+        out_msg.Destination.add(MachineType:L1Cache, in_msg.Requestor);
+        out_msg.DataBlk := getCacheEntry(address).DataBlk;
+        out_msg.Dirty := getCacheEntry(address).Dirty;
+        out_msg.MessageSize := MessageSizeType:Response_Data;
+      }
+    }
+  }
+
+  action(rr_cacheToRequestorExclusive, "\r", desc="Send exclusive data from the cache to the requestor") {
+    peek(addressNetwork_in, AddressMsg) {
+      enqueue(dataNetwork_out, DataMsg, CACHE_LATENCY) {
+        out_msg.Address := address;
+        out_msg.Type := CoherenceResponseType:EXCLUSIVE_DATA;
+        out_msg.Sender := id;
+        out_msg.Destination.add(MachineType:L1Cache, in_msg.Requestor);
+        out_msg.DataBlk := getCacheEntry(address).DataBlk;
+        out_msg.Dirty := getCacheEntry(address).Dirty;
+        out_msg.MessageSize := MessageSizeType:Response_Data;
+      }
+    }
+  }
+
+  action(s_saveDataInTBE, "s", desc="Save data in data field of TBE.") {
+    peek(dataNetwork_in, DataMsg) {
+      TBEs[address].DataBlk := in_msg.DataBlk;
+      TBEs[address].Dirty := in_msg.Dirty;
+      DEBUG_EXPR(TBEs[address].DataBlk);
+    }
+  }
+
+  action(w_writeDataFromTBEToCache, "w", desc="Write data from the TBE into the cache.") {
+    getCacheEntry(address).DataBlk := TBEs[address].DataBlk;
+    getCacheEntry(address).Dirty := TBEs[address].Dirty;
+    DEBUG_EXPR(getCacheEntry(address).DataBlk);
+  }
+  
+  action(x_profileMiss, "x", desc="Profile the demand miss") {
+    peek(mandatoryQueue_in, CacheMsg) {
+      profile_miss(in_msg, id);
+    }
+  }
+
+  action(y_tbeToReq, "y", desc="Send data from the TBE to the requestor.") {
+    peek(addressNetwork_in, AddressMsg) {
+      enqueue(dataNetwork_out, DataMsg, CACHE_LATENCY) {  // Either this or the PutX should have a real latency
+        out_msg.Address := address;
+        out_msg.Type := CoherenceResponseType:DATA;
+        out_msg.Sender := id;
+        out_msg.Destination.add(MachineType:L1Cache, in_msg.Requestor);
+        out_msg.DataBlk := TBEs[address].DataBlk;
+        out_msg.Dirty := TBEs[address].Dirty;
+        out_msg.MessageSize := MessageSizeType:Response_Data;
+      }
+    }
+  }
+  
+  action(z_stall, "z", desc="Cannot be handled right now.") {
+    // Special name recognized as do nothing case
+  }
+
+  action(zz_recycleMandatoryQueue, "\z", desc="Send the head of the mandatory queue to the back of the queue.") {
+    mandatoryQueue_in.recycle();
+  }
+
+  // TRANSITIONS
+
+  // Transitions from Idle
+  transition({NP, I}, Load, IS_AD) {
+    f_issueGETS;
+    c_allocateL1DCacheBlock;
+    a_allocateTBE;
+    x_profileMiss;
+    k_popMandatoryQueue;
+  }
+
+  transition({NP, I}, Ifetch, IS_AD) {
+    f_issueGETS;
+    c_allocateL1ICacheBlock;
+    a_allocateTBE;
+    x_profileMiss;
+    k_popMandatoryQueue;
+  }
+
+  transition({NP, I}, Store, IM_AD) {
+    g_issueGETX;
+    c_allocateL1DCacheBlock;
+    a_allocateTBE;
+    x_profileMiss;
+    k_popMandatoryQueue;
+  }
+
+  transition(I, L2_Replacement) {
+    mm_deallocateL2CacheBlock;
+  }
+
+  transition({NP, I}, {Other_GETS, Other_GETX}) {
+    i_popAddressQueue;
+  }
+
+  // Transitions from Shared
+  transition({S, SM_AD, SM_A, SM_D}, {Load,Ifetch}) {
+    h_load_hit;
+    k_popMandatoryQueue;
+  }
+
+  transition(S, Store, SM_AD) {
+    g_issueGETX;
+    a_allocateTBE;
+    x_profileMiss;
+    k_popMandatoryQueue;
+  }
+
+  transition(S, L2_Replacement, I) {
+    mm_deallocateL2CacheBlock;
+  }
+
+  transition(S, Other_GETS) {
+    i_popAddressQueue;
+  }
+
+  transition(S, Other_GETX, I) {
+    i_popAddressQueue;
+  }
+
+  // Transitions from Owned
+  transition({O, OM_A}, {Load,Ifetch}) {
+    h_load_hit;
+    k_popMandatoryQueue;
+  }
+
+  transition(O, Store, OM_A){
+    g_issueGETX;
+    a_allocateTBE;
+    x_profileMiss;
+    k_popMandatoryQueue;
+  }
+
+  transition(O, L2_Replacement, OI_AD) {
+    p_issuePUT;
+    a_allocateTBE;
+    q_writeDataFromCacheToTBE;// the cache line is now empty
+    mm_deallocateL2CacheBlock;
+  }
+
+  transition(O, Other_GETS) {
+    r_cacheToRequestor;
+    i_popAddressQueue;
+  }
+
+  transition(O, Other_GETX, I) {
+    r_cacheToRequestor;
+    i_popAddressQueue;
+  }
+
+  // Transitions from Exclusive
+  transition({M, M_W}, {Load,Ifetch}) {
+    h_load_hit;
+    k_popMandatoryQueue;
+  }
+
+  transition(M, Store, MM) {
+    hh_store_hit;
+    k_popMandatoryQueue;
+  }
+
+  transition(M_W, Store, MM_W) {
+    hh_store_hit;
+    k_popMandatoryQueue;
+  }
+
+  transition(M, L2_Replacement, MI_AD) {
+    p_issuePUT;
+    a_allocateTBE;
+    q_writeDataFromCacheToTBE;// the cache line is now empty
+    mm_deallocateL2CacheBlock;
+  }
+
+  transition(M, Other_GETS, O) {
+    r_cacheToRequestor;
+    i_popAddressQueue;
+  }
+
+  transition(M, Other_GETX, I) {
+    r_cacheToRequestor;
+    i_popAddressQueue;
+  }
+
+  transition(M_W, {Other_GETS, Other_GETX}) {
+    z_stall;
+  }
+
+  transition(M_W, Timeout, M) {
+    l_popTriggerQueue;
+  }
+
+  // Transitions from Modified
+  transition({MM, MM_W}, {Load,Ifetch}) {
+    h_load_hit;
+    k_popMandatoryQueue;
+  }
+
+  transition({MM, MM_W}, Store) {
+    hh_store_hit;
+    k_popMandatoryQueue;
+  }
+
+  transition(MM, L2_Replacement, MI_AD) {
+    p_issuePUT;
+    a_allocateTBE;
+    q_writeDataFromCacheToTBE;// the cache line is now empty
+    mm_deallocateL2CacheBlock;
+  }
+
+  transition(MM, Other_GETS, I) {
+    rr_cacheToRequestorExclusive;
+    i_popAddressQueue;
+  }
+
+  transition(MM, Other_GETX, I) {
+    r_cacheToRequestor;
+    i_popAddressQueue;
+  }
+
+  transition(MM_W, {Other_GETS, Other_GETX}) {
+    z_stall;
+  }
+
+  transition(MM_W, Timeout, MM) {
+    l_popTriggerQueue;
+  }
+
+  // Transitions moving data between the L1 and L2 caches
+
+  transition({I, S, O, M, MM}, L1_to_L2) {
+    cc_allocateL2CacheBlock;
+    n_copyFromL1toL2; // Not really needed for state I
+    m_deallocateL1CacheBlock;
+  }
+  
+  transition({I, S, O, M, MM}, L2_to_L1D) {
+    c_allocateL1DCacheBlock;
+    nn_copyFromL2toL1; // Not really needed for state I
+    mm_deallocateL2CacheBlock;
+  }
+
+  transition({I, S, O, M, MM}, L2_to_L1I) {
+    c_allocateL1ICacheBlock;
+    nn_copyFromL2toL1; // Not really needed for state I
+    mm_deallocateL2CacheBlock;
+  }
+
+  // Transitions for Load/Store/Replacement from transient states
+
+  transition({IS_AD, IM_AD, IS_A, IM_A, IMM_A, IS_D, IM_D}, {Load, Ifetch, Store, L2_Replacement, L1_to_L2, L2_to_L1D, L2_to_L1I}) {
+    zz_recycleMandatoryQueue;
+  }
+
+  transition({MI_AD, OI_AD, II_AD, MI_A, OI_A, II_A, MI_D, OI_D, II_D}, {Load, Ifetch, Store, L2_Replacement, L1_to_L2, L2_to_L1D, L2_to_L1I}) {
+    zz_recycleMandatoryQueue;
+  }
+
+  transition({M_W, MM_W}, {L2_Replacement, L1_to_L2, L2_to_L1D, L2_to_L1I}) {
+    zz_recycleMandatoryQueue;
+  }
+
+  transition({SM_AD, OM_A, SM_A, SM_D}, {Store, L2_Replacement, L1_to_L2, L2_to_L1D, L2_to_L1I}) {
+    zz_recycleMandatoryQueue;
+  }
+
+  // Always ignore PUTs which we are not the owner of
+  transition({NP, I, S, O, M, MM, M_W, MM_W, IS_AD, IM_AD, SM_AD, OM_A, IS_A, IM_A, IMM_A, SM_A, MI_AD, OI_AD, II_AD, MI_A, OI_A, II_A, MI_D, OI_D, II_D, IS_D, IM_D, SM_D}, Other_PUT) {
+    i_popAddressQueue;
+  }
+
+  // transitions from IS_AD
+
+  transition(IS_AD, Own_GETS, IS_D) {
+    i_popAddressQueue;
+  }
+  transition(IS_AD, {Other_GETS, Other_GETX}) {
+    i_popAddressQueue;
+  }
+  transition(IS_AD, Data, IS_A) {
+    s_saveDataInTBE;
+    j_popDataQueue;
+  }
+
+  transition(IS_AD, Exclusive_Data, IM_A) {
+    s_saveDataInTBE;
+    j_popDataQueue;
+  }
+
+  // Transitions from IM_AD
+
+  transition(IM_AD, Own_GETX, IM_D) {
+    i_popAddressQueue;
+  }
+  transition(IM_AD, {Other_GETS, Other_GETX}) {
+    i_popAddressQueue;
+  }
+  transition(IM_AD, Data, IMM_A) {
+    s_saveDataInTBE;
+    j_popDataQueue;
+  }
+
+  // Transitions from OM_A
+
+  transition(OM_A, Own_GETX, MM_W){
+    hh_store_hit; 
+    o_scheduleTimeout;
+    d_deallocateTBE;
+    i_popAddressQueue;
+  }
+
+  transition(OM_A, Other_GETS){
+    r_cacheToRequestor;
+    i_popAddressQueue;
+  }
+
+  transition(OM_A, Other_GETX, IM_AD){
+    r_cacheToRequestor;
+    i_popAddressQueue;
+  }
+
+  transition(OM_A, Data, IMM_A) {  // if we get data, we know we're going to lose block before we see own GETX
+    s_saveDataInTBE;
+    j_popDataQueue;
+  }
+
+  // Transitions from SM_AD
+
+  transition(SM_AD, Own_GETX, SM_D) {
+    i_popAddressQueue;
+  }
+  transition(SM_AD, Other_GETS) {
+    i_popAddressQueue;
+  }
+  transition(SM_AD, Other_GETX, IM_AD) {
+    i_popAddressQueue;
+  }
+  transition(SM_AD, Data, SM_A) {
+    s_saveDataInTBE;
+    j_popDataQueue;
+  }
+
+
+  // Transitions from IS_A
+
+  transition(IS_A, Own_GETS, S) {
+    w_writeDataFromTBEToCache;
+    h_load_hit;
+    d_deallocateTBE;
+    i_popAddressQueue;
+  }
+
+  transition(IS_A, {Other_GETS, Other_GETX}) {
+    i_popAddressQueue;
+  }
+
+  // Transitions from IM_A
+
+  transition(IM_A, Own_GETS, M_W) {
+    w_writeDataFromTBEToCache;
+    h_load_hit;
+    o_scheduleTimeout;
+    d_deallocateTBE;
+    i_popAddressQueue;
+  }
+
+  transition(IM_A, {Other_GETS, Other_GETX}) {
+    i_popAddressQueue;
+  }
+
+  // Transitions from IMM_A
+
+  transition(IMM_A, Own_GETX, MM_W) {
+    w_writeDataFromTBEToCache;
+    hh_store_hit;
+    o_scheduleTimeout;
+    d_deallocateTBE;
+    i_popAddressQueue;
+  }
+  transition(IMM_A, {Other_GETS, Other_GETX}) {
+    i_popAddressQueue;
+  }
+
+  // Transitions from SM_A
+
+  transition(SM_A, Own_GETX, MM_W) {
+    w_writeDataFromTBEToCache;
+    hh_store_hit;
+    o_scheduleTimeout;
+    d_deallocateTBE;
+    i_popAddressQueue;
+  }
+  transition(SM_A, Other_GETS) {
+    i_popAddressQueue;
+  }
+  transition(SM_A, Other_GETX, IMM_A) {
+    i_popAddressQueue;
+  }
+
+
+  // Transitions from MI_AD
+
+  transition(MI_AD, Own_PUT, MI_D) {
+    i_popAddressQueue;
+  }
+
+  transition(MI_AD, Other_GETS) {
+    y_tbeToReq;
+    i_popAddressQueue;
+  }
+
+  transition(MI_AD, Other_GETX, II_AD) {
+    y_tbeToReq;
+    i_popAddressQueue;
+  }
+
+  transition(MI_AD, WB_Ack, MI_A) {
+    j_popDataQueue;
+  }
+
+  // Transitions from OI_AD
+
+  transition(OI_AD, Own_PUT, OI_D) {
+    i_popAddressQueue;
+  }
+
+  transition(OI_AD, Other_GETS) {
+    y_tbeToReq;
+    i_popAddressQueue;
+  }
+
+  transition(OI_AD, Other_GETX, II_AD) {
+    y_tbeToReq;
+    i_popAddressQueue;
+  }
+
+  transition(OI_AD, WB_Ack, MI_A) {
+    j_popDataQueue;
+  }
+
+  // Transitions from II_AD
+
+  transition(II_AD, Own_PUT, II_D) {
+    i_popAddressQueue;
+  }
+
+  transition(II_AD, {Other_GETS, Other_GETX}) {
+    i_popAddressQueue;
+  }
+
+  transition(II_AD, WB_Ack, II_A) {
+    j_popDataQueue;
+  }
+
+  // Transitions from MI_D, OI_D, II_D
+
+  transition({MI_D, OI_D, II_D}, {Other_GETS, Other_GETX}) {
+    i_popAddressQueue;
+  }
+
+  transition(MI_D, WB_Ack, I) {
+    bb_sendWritebackExclusiveData;
+    d_deallocateTBE;
+    j_popDataQueue;
+  }
+
+  transition(OI_D, WB_Ack, I) {
+    b_sendWritebackData;
+    d_deallocateTBE;
+    j_popDataQueue;
+  }
+
+  transition(II_D, WB_Ack, I) {
+    e_sendWritebackNack;
+    d_deallocateTBE;
+    j_popDataQueue;
+  }
+
+  // Transitions from MI_A
+
+  transition(MI_A, Own_PUT, I) {
+    bb_sendWritebackExclusiveData;
+    d_deallocateTBE;
+    i_popAddressQueue;
+  }
+
+  transition(MI_A, Other_GETS) {
+    y_tbeToReq;
+    i_popAddressQueue;
+  }
+
+  transition(MI_A, Other_GETX, II_A) {
+    y_tbeToReq;
+    i_popAddressQueue;
+  }
+
+  // Transitions from OI_A
+
+  transition(OI_A, Own_PUT, I) {
+    b_sendWritebackData;
+    d_deallocateTBE;
+    i_popAddressQueue;
+  }
+
+  transition(OI_A, Other_GETS) {
+    y_tbeToReq;
+    i_popAddressQueue;
+  }
+
+  transition(OI_A, Other_GETX, II_A) {
+    y_tbeToReq;
+    i_popAddressQueue;
+  }
+
+  // Transitions from II_A
+
+  transition(II_A, Own_PUT, I) {
+    e_sendWritebackNack;
+    d_deallocateTBE;
+    i_popAddressQueue;
+  }
+
+  transition(II_A, {Other_GETS, Other_GETX}) {
+    i_popAddressQueue;
+  }
+
+  // Transitions from IS_D
+
+  transition(IS_D, {Other_GETS, Other_GETX}) {
+    z_stall;
+  }
+
+  transition(IS_D, Data, S) {
+    s_saveDataInTBE;
+    w_writeDataFromTBEToCache;
+    h_load_hit;
+    d_deallocateTBE;
+    j_popDataQueue;
+  }
+
+  transition(IS_D, Exclusive_Data, M_W) {
+    s_saveDataInTBE;
+    w_writeDataFromTBEToCache;
+    h_load_hit;
+    o_scheduleTimeout;
+    d_deallocateTBE;
+    j_popDataQueue;
+  }
+
+  // Transitions from IM_D
+
+  transition(IM_D, {Other_GETS, Other_GETX}) {
+    z_stall;
+  }
+
+  transition(IM_D, Data, MM_W) {
+    s_saveDataInTBE;
+    w_writeDataFromTBEToCache;
+    hh_store_hit;
+    o_scheduleTimeout;
+    d_deallocateTBE;
+    j_popDataQueue;
+  }
+
+  // Transitions for SM_D
+
+  transition(SM_D, {Other_GETS, Other_GETX}) {
+    z_stall;
+  }
+
+  transition(SM_D, Data, MM_W) {
+    s_saveDataInTBE;
+    w_writeDataFromTBEToCache;
+    hh_store_hit;
+    o_scheduleTimeout;
+    d_deallocateTBE;
+    j_popDataQueue;
+  }
+}

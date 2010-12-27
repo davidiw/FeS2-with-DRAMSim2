@@ -1,0 +1,169 @@
+[
+##     {'kind': 'PARAM_INT', # one of PARAM_{STRING | BOOL | INT | ENUM}
+##      'name': 'theNameOfTheParam', # must be a valid C identifier
+##      'initialValue': 0, # must be of appropriate type
+##      'readOnly': True } # this parameter can only be read
+    
+    {'global': True,
+     'defType': 'Param'},
+
+    {'kind': 'PARAM_STRING',
+     'name': 'debugCategory',
+     'initialValue': "" },
+
+    {'kind': 'PARAM_BOOL', 
+     'name': 'setupSuccessful',
+     'initialValue': False },
+    {'kind': 'PARAM_BOOL', 
+     'name': 'runningExperiment',
+     'initialValue': False },
+    {'kind': 'PARAM_BOOL', 
+     'name': 'benchmarkRunning',
+     'initialValue': False },
+    {'kind': 'PARAM_BOOL', 
+     'name': 'runSuccessful',
+     'initialValue': False },
+    {'kind': 'PARAM_BOOL', 
+     'name': 'loadingPyriteFromConfig',
+     'initialValue': False },
+    {'kind': 'PARAM_BOOL', 
+     'name': 'pyriteIsControlling',
+     'initialValue': False },
+ 
+    {'kind': 'PARAM_BOOL', 
+     'name': 'enforceCorrectSpeculation',
+     'initialValue': False },
+    
+    {'kind': 'PARAM_INT', 
+     'name': 'experimentStartDate',
+     'initialValue': 0 },
+    {'kind': 'PARAM_INT', 
+     'name': 'experimentFinishDate',
+     'initialValue': 0 },
+
+    {'kind': 'PARAM_STRING', 
+     'name': 'workload',
+     'initialValue': "" },
+    {'kind': 'PARAM_STRING', 
+     'name': 'config',
+     'initialValue': "" },
+    {'kind': 'PARAM_INT', 
+     'name': 'configBuildDate',
+     'initialValue': 0 },
+    {'kind': 'PARAM_INT', 
+     'name': 'workloadBuildDate',
+     'initialValue': 0 },
+
+    {'kind': 'PARAM_INT', 
+     'name': 'numProcessors',
+     'initialValue': 1 },
+
+    {'kind': 'PARAM_INT', 
+     'name': 'processTrackerID',
+     'initialValue': -1 },
+
+    {'kind': 'PARAM_INT', 
+     'name': 'ourCR3Value',
+     'initialValue': -1 },
+
+    {'kind': 'PARAM_INT', 
+     'name': 'memoryBlockBits',
+     'initialValue': 6 },
+    
+    {'kind': 'PARAM_INT', 
+     'name': 'l1MissLatency',
+     'initialValue': 10 },
+    
+    {'kind': 'PARAM_INT', 
+     'name': 'l1DataNumSetBits',
+     'initialValue': 7 },
+
+    {'kind': 'PARAM_INT', 
+     'name': 'l1DataAssoc',
+     'initialValue': 4 },
+
+    {'kind': 'PARAM_INT', 
+     'name': 'l1InsnNumSetBits',
+     'initialValue': 7 },
+
+    {'kind': 'PARAM_INT', 
+     'name': 'l1InsnAssoc',
+     'initialValue': 4 },
+
+    {'kind': 'PARAM_INT', 
+     'name': 'l2NumSetBits',
+     'initialValue': 10 },
+
+    {'kind': 'PARAM_INT', 
+     'name': 'l2Assoc',
+     'initialValue': 8 },
+
+    {'kind': 'PARAM_INT', 
+     'name': 'permissionOnlyCacheBits',
+     'initialValue': 10 },
+
+    {'kind': 'PARAM_INT', 
+     'name': 'permissionOnlyCacheAssoc',
+     'initialValue': 2 },
+
+    {'kind': 'PARAM_INT', 
+     'name': 'memoryStallTimePre',
+     'initialValue': 100 },
+    
+    {'kind': 'PARAM_INT', 
+     'name': 'memoryStallTimePost',
+     'initialValue': 100 },
+    
+    {'kind': 'PARAM_INT', 
+     'name': 'memorySizeBits',
+     'initialValue': 32 },
+
+    {'kind': 'PARAM_INT', 
+     'name': 'maxConservativeID',
+     'initialValue': 0 },
+    
+    {'kind': 'PARAM_BOOL', 
+     'name': 'prioritizedConflict',
+     'initialValue': False },
+
+    {'kind': 'PARAM_BOOL', 
+     'name': 'realisticConservative',
+     'initialValue': False },
+    
+    {'kind': 'PARAM_BOOL', 
+     'name': 'permissionOnlyCacheEnabled',
+     'initialValue': False },
+    
+    {'kind': 'PARAM_STRING', 
+     'name': 'statsFilePath',
+     'initialValue': "/dev/null" },
+
+    {'kind': 'PARAM_STRING', 
+     'name': 'disasmFilePath',
+     'initialValue': "/dev/null" },
+
+    {'kind': 'PARAM_STRING', 
+     'name': 'predictorAccuracyFilePath',
+     'initialValue': "/dev/null" },
+
+    {'kind': 'PARAM_STRING', 
+     'name': 'dumpFilePath',
+     'initialValue': "/dev/null" },
+
+    {'kind': 'PARAM_ENUM', 
+     'name': 'enumParam',
+     'possibleValues' : ['MEMORY_BANDWIDTH_MODEL_REALISTIC', 'MEMORY_BANDWIDTH_MODEL_INFINITE'],
+     'initialValue': 'MEMORY_BANDWIDTH_MODEL_REALISTIC' },
+
+    {'kind': 'PARAM_BOOL',
+     'name': 'initUsingWarmup',
+     'initialValue': True },
+
+    {'kind': 'PARAM_BOOL', 
+     'name': 'ruby',
+     'initialValue': False },
+
+    {'kind': 'PARAM_BOOL',
+     'name': 'printIntermediateStats',
+     'initialValue': True },
+]

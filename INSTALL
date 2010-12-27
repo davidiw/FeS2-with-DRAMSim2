@@ -1,0 +1,15 @@
+INSTALLATION
+
+1. Set environment variables:
+
+  -Set FES2_HOME to this directory.
+  -Set SIMICS_INSTALL_DIR to the directory where you installed simics
+  -Add $FES2_HOME/python_lib and $FES2_HOME/external/pacg to PYTHONPATH.
+
+2. Run the installation script:
+   ./install.py.
+
+3. Build the source code:
+   make 
+
+Happy simulating (snort)!

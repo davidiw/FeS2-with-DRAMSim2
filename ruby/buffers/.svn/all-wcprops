@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/pub/svn/FeS2/!svn/ver/48/trunk/ruby/buffers
+END
+MessageBuffer.C
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/pub/svn/FeS2/!svn/ver/48/trunk/ruby/buffers/MessageBuffer.C
+END
+MessageBuffer.h
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/pub/svn/FeS2/!svn/ver/48/trunk/ruby/buffers/MessageBuffer.h
+END
+MessageBufferNode.C
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/pub/svn/FeS2/!svn/ver/48/trunk/ruby/buffers/MessageBufferNode.C
+END
+MessageBufferNode.h
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/pub/svn/FeS2/!svn/ver/48/trunk/ruby/buffers/MessageBufferNode.h
+END

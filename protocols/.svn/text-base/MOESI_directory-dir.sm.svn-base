@@ -1,0 +1,458 @@
+/* This file is part of SLICC (Specification Language for Implementing
+   Cache Coherence), a component of the Multifacet GEMS (General
+   Execution-driven Multiprocessor Simulator) software toolset
+   originally developed at the University of Wisconsin-Madison.
+
+   SLICC was originally developed by Milo Martin with substantial
+   contributions from Daniel Sorin.
+
+   Ruby was originally developed primarily by Milo Martin and Daniel
+   Sorin with contributions from Ross Dickson, Carl Mauer, and Manoj
+   Plakal.
+
+   Substantial further development of Multifacet GEMS at the
+   University of Wisconsin was performed by Alaa Alameldeen, Brad
+   Beckmann, Ross Dickson, Pacia Harper, Milo Martin, Michael Marty,
+   Carl Mauer, Kevin Moore, Manoj Plakal, Daniel Sorin, Min Xu, and
+   Luke Yen.
+
+   Additional development was performed at the University of
+   Pennsylvania by Milo Martin.
+
+   --------------------------------------------------------------------
+
+   Copyright (C) 1999-2005 by Mark D. Hill and David A. Wood for the
+   Wisconsin Multifacet Project.  Contact: gems@cs.wisc.edu
+   http://www.cs.wisc.edu/gems/
+
+   This file is based upon a pre-release version of Multifacet GEMS
+   from 2004 and may also contain additional modifications and code
+   Copyright (C) 2004-2007 by Milo Martin for the Penn Architecture
+   and Compilers Group.  Contact: acg@lists.seas.upenn.edu
+   http://www.cis.upenn.edu/acg/
+
+   --------------------------------------------------------------------
+
+   Multifacet GEMS is free software; you can redistribute it and/or
+   modify it under the terms of version 2 of the GNU General Public
+   License as published by the Free Software Foundation.  This 
+   software comes with ABSOLUTELY NO WARRANTY.  For details see the 
+   file LICENSE included with the distribution.
+*/
+// -----------------------------------------------------------------------------
+//
+//  This file is part of FeS2.
+//
+//  FeS2 is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  FeS2 is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with FeS2.  If not, see <http://www.gnu.org/licenses/>.
+//
+// -----------------------------------------------------------------------------
+
+machine(Directory, "Directory protocol") {
+
+  // STATES
+  enumeration(State, desc="Directory states", default="Directory_State_I") {
+    // Base states
+    I, desc="Invalid";
+    S, desc="Shared";
+    O, desc="Owner";
+    M, desc="Modified";
+
+    IS, desc="Blocked, was in idle, received GETS";
+    SS, desc="Blocked, was in shared, received GETS";
+    OO, desc="Blocked, was in owned, received GETS";
+    MO, desc="Blocked, was in modified, received GETS, going to owner or maybe modified";
+
+    IM, desc="Blocked, was in idle, received GETX";
+    SM, desc="Blocked, was in shared, received GETX";
+    OM, desc="Blocked, was in owned, received GETX";
+    MM, desc="Blocked, was in modified, received GETX, going to owner or maybe modified";
+  }
+
+  // Events
+  enumeration(Event, desc="Directory events") {
+    GETX, desc="A GETX arrives";
+    GETS, desc="A GETS arrives";
+    Clean_PUT,  desc="A Clean PUT arrives";
+    Dirty_PUT,  desc="A Dirty PUT arrives";
+    Stale_PUT,  desc="A PUT arrives, but the requester is not the owner";
+    Unblock, desc="An unblock message arrives";
+    Exclusive_Unblock, desc="The processor become the exclusive owner (E or M) of the line";
+  }
+
+  // TYPES
+
+  // DirectoryEntry
+  structure(Entry, desc="...") {
+    State DirectoryState,          desc="Directory state";
+    DataBlock DataBlk,             desc="data for the block";
+    Set Sharers,                   desc="Sharers for this block";
+    Set Owner,                     desc="Owner of this block";
+  }
+
+  external_type(DirectoryMemory) {
+    Entry lookup(Address);
+    bool isPresent(Address);
+  }
+
+  // External function
+  void profile_sharing(Address addr, AccessType type, NodeID requestor, Set sharers, Set owner);
+
+  // ** OBJECTS **
+  DirectoryMemory directory;
+
+  State getState(Address addr) {
+    return directory[addr].DirectoryState;
+  }
+  
+  void setState(Address addr, State state) {
+    if (directory.isPresent(addr)) {
+
+      if ((state == State:I) || (state == State:IS) || (state == State:IM)) {
+        assert(directory[addr].Owner.count() == 0);
+        assert(directory[addr].Sharers.count() == 0);
+      }
+
+      if ((state == State:S) || (state == State:SS) || (state == State:SM)) {
+        assert(directory[addr].Owner.count() == 0);
+        assert(directory[addr].Sharers.count() != 0);
+      }
+
+      if ((state == State:O) || (state == State:OO) || (state == State:OM)) {
+        assert(directory[addr].Owner.count() == 1);
+        assert(directory[addr].Sharers.count() != 0);
+        assert(directory[addr].Sharers.isSuperset(directory[addr].Owner) == false);
+      }
+
+      if ((state == State:M) || (state == State:MO) || (state == State:MM)) {
+        assert(directory[addr].Owner.count() == 1);
+        assert(directory[addr].Sharers.count() == 0);
+      }
+
+      directory[addr].DirectoryState := state;
+    }
+  }
+  
+  // ** BUFFERS **
+
+  MessageBuffer requestToDir, network="From", virtual_network="0", ordered="false";
+  MessageBuffer forwardFromDir, network="To", virtual_network="1", ordered="false";
+  MessageBuffer responseFromDir, network="To", virtual_network="2", ordered="false";
+  MessageBuffer unblockToDir, network="From", virtual_network="3", ordered="false";
+
+  // ** OUT_PORTS **
+
+  out_port(forwardNetwork_out, RequestMsg, forwardFromDir);
+  out_port(responseNetwork_out, ResponseMsg, responseFromDir);
+  out_port(requestQueue_out, ResponseMsg, requestToDir); // For recycling requests
+  
+  // ** IN_PORTS **
+  
+  in_port(unblockNetwork_in, ResponseMsg, unblockToDir) {
+    if (unblockNetwork_in.isReady()) {
+      peek(unblockNetwork_in, ResponseMsg) {
+        if (in_msg.Type == CoherenceResponseType:UNBLOCK) {
+          trigger(Event:Unblock, in_msg.Address);
+        } else if (in_msg.Type == CoherenceResponseType:UNBLOCK_EXCLUSIVE) {
+          trigger(Event:Exclusive_Unblock, in_msg.Address);
+        } else {
+          error("Invalid message");
+        }
+      }
+    }
+  }
+
+  in_port(requestQueue_in, RequestMsg, requestToDir) {
+    if (requestQueue_in.isReady()) {
+      peek(requestQueue_in, RequestMsg) {
+        if (in_msg.Type == CoherenceRequestType:GETS) {
+          trigger(Event:GETS, in_msg.Address);
+        } else if (in_msg.Type == CoherenceRequestType:GETX) {
+          trigger(Event:GETX, in_msg.Address);
+        } else if (in_msg.Type == CoherenceRequestType:PUT_CLEAN) {
+          if (directory[in_msg.Address].Owner.isElement(in_msg.Requestor)) {
+            trigger(Event:Clean_PUT, in_msg.Address);
+          } else {
+            trigger(Event:Stale_PUT, in_msg.Address);
+          }
+        } else if (in_msg.Type == CoherenceRequestType:PUT_DIRTY) {
+          if (directory[in_msg.Address].Owner.isElement(in_msg.Requestor)) {
+            trigger(Event:Dirty_PUT, in_msg.Address);
+          } else {
+            trigger(Event:Stale_PUT, in_msg.Address);
+          }
+        } else {
+          error("Invalid message");
+        }
+      }
+    }
+  }
+
+  // Actions
+  
+  action(a_sendWritebackAck, "a", desc="Send writeback ack to requestor") {
+    peek(requestQueue_in, RequestMsg) {
+      enqueue(responseNetwork_out, ResponseMsg, DIRECTORY_LATENCY) {
+        out_msg.Address := address;
+        out_msg.Type := CoherenceResponseType:WB_ACK;
+        out_msg.Sender := in_msg.Requestor;
+        out_msg.Destination.add(MachineType:L1Cache, in_msg.Requestor);
+        out_msg.MessageSize := MessageSizeType:Writeback_Control;
+      }
+    }
+  }
+
+  action(c_clearOwner, "c", desc="Clear the owner field") {
+    directory[address].Owner.clear();
+  }
+
+  action(cc_clearSharers, "\c", desc="Clear the sharers field") {
+    directory[address].Sharers.clear();
+  }
+
+  action(d_sendData, "d", desc="Send data to requestor") {
+    peek(requestQueue_in, RequestMsg) {
+      enqueue(responseNetwork_out, ResponseMsg, MEMORY_LATENCY) {
+        out_msg.Address := address;
+
+        if (directory[address].Sharers.count() == 0) {
+          out_msg.Type := CoherenceResponseType:DATA_EXCLUSIVE_CLEAN;
+        } else {
+          out_msg.Type := CoherenceResponseType:DATA;
+        }
+
+        out_msg.Sender := id;
+        out_msg.Destination.add(MachineType:L1Cache, in_msg.Requestor);
+        out_msg.DataBlk := directory[address].DataBlk;
+        out_msg.Acks := directory[address].Sharers.count();
+        if (directory[address].Sharers.isElement(in_msg.Requestor)) {
+          out_msg.Acks := out_msg.Acks - 1;
+        }
+        out_msg.MessageSize := MessageSizeType:Response_Data;
+      }
+    }
+  }
+
+  action(e_ownerIsUnblocker, "e", desc="The owner is now the unblocker") {
+    peek(unblockNetwork_in, ResponseMsg) {
+      directory[address].Owner.clear();
+      directory[address].Owner.add(in_msg.Sender);
+    }
+  }
+
+  action(f_forwardRequest, "f", desc="Forward request to owner") {
+    peek(requestQueue_in, RequestMsg) {
+      enqueue(forwardNetwork_out, RequestMsg, DIRECTORY_LATENCY) {
+        out_msg.Address := address;
+        out_msg.Type := in_msg.Type;
+        out_msg.Requestor := in_msg.Requestor;
+        out_msg.Destination.addSet(MachineType:L1Cache, directory[in_msg.Address].Owner);
+        out_msg.Acks := directory[address].Sharers.count();
+        if (directory[address].Sharers.isElement(in_msg.Requestor)) {
+          out_msg.Acks := out_msg.Acks - 1;
+        }
+        out_msg.MessageSize := MessageSizeType:Forwarded_Control;
+      }
+    }
+  }
+
+  action(g_sendInvalidations, "g", desc="Send invalidations to sharers, not including the requester") {
+    peek(requestQueue_in, RequestMsg) {
+      if ((directory[in_msg.Address].Sharers.count() > 1) || 
+          ((directory[in_msg.Address].Sharers.count() > 0) && (directory[in_msg.Address].Sharers.isElement(in_msg.Requestor) == false))) {
+        enqueue(forwardNetwork_out, RequestMsg, DIRECTORY_LATENCY) {
+          out_msg.Address := address;
+          out_msg.Type := CoherenceRequestType:INV;
+          out_msg.Requestor := in_msg.Requestor;
+          out_msg.Destination.addSet(MachineType:L1Cache, directory[in_msg.Address].Sharers);
+          out_msg.Destination.remove(MachineType:L1Cache, in_msg.Requestor);
+          out_msg.MessageSize := MessageSizeType:Forwarded_Control;
+        }
+      }
+    }
+  }
+
+  action(i_popIncomingRequestQueue, "i", desc="Pop incoming request queue") {
+    // Profile the request
+    peek(requestQueue_in, RequestMsg) {
+      if (in_msg.Type == CoherenceRequestType:GETX) {
+        profile_sharing(address, AccessType:Write, in_msg.Requestor, directory[address].Sharers, directory[address].Owner);
+      } else if (in_msg.Type == CoherenceRequestType:GETS) {
+        profile_sharing(address, AccessType:Read, in_msg.Requestor, directory[address].Sharers, directory[address].Owner);
+      } 
+    }
+
+    requestQueue_in.dequeue();
+  }
+
+  action(j_popIncomingUnblockQueue, "j", desc="Pop incoming unblock queue") {
+    unblockNetwork_in.dequeue();
+  }
+
+  action(l_writeDataToMemory, "l", desc="Write PUT data to memory") {
+    peek(requestQueue_in, RequestMsg) {
+      assert(in_msg.Type == CoherenceRequestType:PUT_DIRTY);
+      assert(in_msg.MessageSize == MessageSizeType:Writeback_Data);
+      directory[in_msg.Address].DataBlk := in_msg.DataBlk;
+    }
+  }
+
+  action(ll_checkDataInMemory, "\l", desc="Check PUT data is same as in the memory") {
+    peek(requestQueue_in, RequestMsg) {
+      assert(in_msg.Type == CoherenceRequestType:PUT_CLEAN);
+      assert(in_msg.MessageSize == MessageSizeType:Writeback_Control);
+
+      // NOTE: The following check would not be valid in a real
+      // implementation.  We include the data in the "dataless"
+      // message so we can assert the clean data matches the datablock
+      // in memory
+      assert(directory[in_msg.Address].DataBlk == in_msg.DataBlk);
+    }
+  }
+
+  action(m_addUnlockerToSharers, "m", desc="Add the unlocker to the sharer list") {
+    peek(unblockNetwork_in, ResponseMsg) {
+      directory[address].Sharers.add(in_msg.Sender);      
+    }
+  }
+
+  action(zz_recycleRequest, "\z", desc="Recycle the request queue") {
+    requestQueue_in.recycle();
+  }
+
+  // TRANSITIONS
+
+  transition({IS, SS, OO, MO, IM, SM, OM, MM}, {GETS, GETX}) {
+    zz_recycleRequest;
+  }
+
+  transition({IS, SS, OO, MO, IM, SM, OM, MM}, Stale_PUT) {
+    // We must stall all Stale_PUTs requests because they may not be
+    // "stale" once the pending request is done.  For example, if a
+    // "unblock" message is delayed the writeback might arrive at the
+    // directory before the unblock.  This writeback looks "stale"
+    // until the unblock arrives.
+    zz_recycleRequest; 
+  }
+
+  transition({OO, MO, OM, MM}, {Dirty_PUT, Clean_PUT}) {
+    zz_recycleRequest;
+  }
+
+  transition(I, GETX, IM) {
+    d_sendData;
+    i_popIncomingRequestQueue;
+  }
+
+  transition(S, GETX, SM) {
+    d_sendData;
+    g_sendInvalidations;
+    i_popIncomingRequestQueue;
+  }
+
+  transition(I, GETS, IS) {
+    d_sendData;
+    i_popIncomingRequestQueue;
+  }
+
+  transition(S, GETS, SS) {
+    d_sendData;
+    i_popIncomingRequestQueue;
+  }
+
+  transition(O, GETX, OM) {
+    f_forwardRequest;
+    g_sendInvalidations;
+    i_popIncomingRequestQueue;
+  }
+
+  transition(O, GETS, OO) {
+    f_forwardRequest;
+    i_popIncomingRequestQueue;
+  }
+
+  transition(M, GETX, MM) {
+    f_forwardRequest;
+    i_popIncomingRequestQueue;
+  }
+
+  transition(M, GETS, MO) {
+    f_forwardRequest;
+    i_popIncomingRequestQueue;
+  }
+
+  transition(M, Dirty_PUT, I) {
+    l_writeDataToMemory;
+    c_clearOwner;
+    a_sendWritebackAck;
+    i_popIncomingRequestQueue;
+  }
+
+  transition(M, Clean_PUT, I) {
+    ll_checkDataInMemory;
+    c_clearOwner;
+    a_sendWritebackAck;
+    i_popIncomingRequestQueue;
+  }
+
+  transition(O, Dirty_PUT, S) {
+    l_writeDataToMemory;
+    c_clearOwner;
+    a_sendWritebackAck;
+    i_popIncomingRequestQueue;
+  }
+
+  transition(O, Clean_PUT, S) {
+    ll_checkDataInMemory;
+    c_clearOwner;
+    a_sendWritebackAck;
+    i_popIncomingRequestQueue;
+  }
+
+  transition({I, S, O, M}, Stale_PUT) {
+    a_sendWritebackAck;
+    i_popIncomingRequestQueue;
+  }
+
+  transition({IM, SM, OM, MM, MO}, Exclusive_Unblock, M) {
+    cc_clearSharers;
+    e_ownerIsUnblocker;
+    j_popIncomingUnblockQueue;
+  }
+
+  transition(MO, Unblock, O) {
+    m_addUnlockerToSharers;
+    j_popIncomingUnblockQueue;
+  }
+
+  transition(IS, Unblock, S) {
+    m_addUnlockerToSharers;
+    j_popIncomingUnblockQueue;
+  }
+
+  transition(IS, Exclusive_Unblock, M) {
+    cc_clearSharers;
+    e_ownerIsUnblocker;
+    j_popIncomingUnblockQueue;
+  }
+
+  transition(SS, Unblock, S) {
+    m_addUnlockerToSharers;
+    j_popIncomingUnblockQueue;
+  }
+
+  transition(OO, Unblock, O) {
+    m_addUnlockerToSharers;
+    j_popIncomingUnblockQueue;
+  }
+}

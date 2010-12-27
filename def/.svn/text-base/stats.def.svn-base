@@ -1,0 +1,260 @@
+[
+##     {'kind': 'STAT_INT', 'STAT_HASHTABLE', 'STAT_HISTOGRAM' # a counter or a histogram stat
+##      'name': 'theNameOfTheStatistic', # must be a valid C identifier
+##      'initialValue': int, # an int for STAT_INT and STAT_HASHTABLE
+##      'per-processor': bool, # stat is per-processor (default: True)
+##      'printHexKey': bool, # for STAT_HASHTABLE, print key in hex (default: False)
+
+## Hashtables are int -> int. The initial value specifies the value to be used
+## if the value for a key is incremented/decremented without first being set.
+
+## Histograms are currently broken.
+    
+    {'global': True,
+     'defType': 'Stat'},
+
+    {'kind': 'STAT_INT',
+     'name': 'totalCycles',
+     'per-processor': False,
+     'initialValue': 0 },
+
+    {'kind': 'STAT_HASHTABLE',
+     'name': 'testHash',
+     'per-processor': False,
+     'initialValue': 0},
+    
+    {'kind': 'STAT_HASHTABLE',
+     'name': 'incorrectlyExecutedPCs',
+     'initialValue': 0,
+     'printHexKey': True },
+
+    {'kind': 'STAT_HASHTABLE',
+     'name': 'unimplementedPCs',
+     'initialValue': 0,
+     'printHexKey': True },
+
+    {'kind': 'STAT_HASHTABLE',
+     'name': 'unalignedLoadPCs',
+     'initialValue': 0,
+     'printHexKey': True },
+
+    {'kind': 'STAT_HASHTABLE',
+     'name': 'unalignedLoadAddresses',
+     'initialValue': 0,
+     'printHexKey': True },
+
+    {'kind': 'STAT_HASHTABLE',
+     'name': 'noTranslationLoadPCs',
+     'initialValue': 0,
+     'printHexKey': True },
+    
+    {'kind': 'STAT_HASHTABLE',
+     'name': 'noTranslationLoadAddresses',
+     'initialValue': 0,
+     'printHexKey': True },
+    
+    {'kind': 'STAT_HASHTABLE',
+     'name': 'unalignedStorePCs',
+     'initialValue': 0,
+     'printHexKey': True },
+
+    {'kind': 'STAT_HASHTABLE',
+     'name': 'unalignedStoreAddresses',
+     'initialValue': 0,
+     'printHexKey': True },
+
+    {'kind': 'STAT_HASHTABLE',
+     'name': 'noTranslationStorePCs',
+     'initialValue': 0,
+     'printHexKey': True },
+    
+    {'kind': 'STAT_HASHTABLE',
+     'name': 'noTranslationStoreAddresses',
+     'initialValue': 0,
+     'printHexKey': True },
+    
+    {'kind': 'STAT_INT',
+     'name': 'unitsOfWork',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'processorState',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'instructionsUsingCTXReg',
+     'initialValue': 0 },
+    
+    {'kind': 'STAT_INT',
+     'name': 'processorFinishTime',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'totalUOps',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'fences',
+     'initialValue': 0 },
+    
+    {'kind': 'STAT_INT',
+     'name': 'loads',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'stores',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'branches',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'totalX86Instructions',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'correctlyExecutedX86Instructions',
+     'initialValue': 0 },
+    
+    {'kind': 'STAT_INT',
+     'name': 'noTranslationForInsnX86Instructions',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'memoryStallCycles',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'kernelCycles',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'privateWorkCycles',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'criticalSectionCycles',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'lockAcquireCycles',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'lockReleaseCycles',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'barrierCycles',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'validationInterval',
+     'initialValue': 1 },
+
+    {'kind': 'STAT_INT',
+     'name': 'resets',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'unimplementedX86Instructions',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'invalidX86Instructions',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'incorrectlyExecutedX86Instructions',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'interrupts',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_HASHTABLE',
+     'name': 'exceptions',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'aborts',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'stalls',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'unalignedLoadX86Instructions',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'unalignedStoreX86Instructions',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'noTranslationLoadX86Instructions',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'noTranslationStoreX86Instructions',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'memoryAccesses',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'l1Misses',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'l2Misses',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'kernelInsts',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'kernelStretches',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'totalBranchPredictions',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'totalBranchMispredictions',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'checkExceptions',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'loadOrderingSquashes',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'loadConsistencySquashes',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'committedBrr',
+     'initialValue': 0 },
+
+    {'kind': 'STAT_INT',
+     'name': 'committedTakenBrr',
+     'initialValue': 0 },
+
+    #
+    # dummy histogram, as the stat templates need >0 histograms
+    {'kind': 'STAT_HISTOGRAM',
+     'name': 'dummyHistogram',
+     'buckets': 2,
+     'start': 1,
+     'step': 1 }
+
+]

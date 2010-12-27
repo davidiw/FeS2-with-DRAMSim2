@@ -1,0 +1,17 @@
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/pub/svn/FeS2/!svn/ver/10/pacg/trunk/test
+END
+typecheck_error_messages.py
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/pub/svn/FeS2/!svn/ver/10/pacg/trunk/test/typecheck_error_messages.py
+END
+typecheck_tests.py
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/pub/svn/FeS2/!svn/ver/10/pacg/trunk/test/typecheck_tests.py
+END

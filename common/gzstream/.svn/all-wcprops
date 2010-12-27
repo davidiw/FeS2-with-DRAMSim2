@@ -1,0 +1,47 @@
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/pub/svn/FeS2/!svn/ver/49/trunk/common/gzstream
+END
+gzstream.h
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/pub/svn/FeS2/!svn/ver/49/trunk/common/gzstream/gzstream.h
+END
+version
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/pub/svn/FeS2/!svn/ver/49/trunk/common/gzstream/version
+END
+index.html
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/pub/svn/FeS2/!svn/ver/49/trunk/common/gzstream/index.html
+END
+COPYING.LIB
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/pub/svn/FeS2/!svn/ver/49/trunk/common/gzstream/COPYING.LIB
+END
+Makefile
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/pub/svn/FeS2/!svn/ver/49/trunk/common/gzstream/Makefile
+END
+README
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/pub/svn/FeS2/!svn/ver/49/trunk/common/gzstream/README
+END
+gzstream.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/pub/svn/FeS2/!svn/ver/49/trunk/common/gzstream/gzstream.cpp
+END

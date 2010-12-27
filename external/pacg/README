@@ -1,0 +1,7 @@
+To use these libraries, add this directory to your PYTHONPATH environment
+variable, and put "from pacg import *" at the top of your python script.
+You can then access e.g. the appendToFile function in shell.py via
+"shell.appendToFile".
+
+To view the documentation of these libraries, run pydoc -g, and either browse
+the documentation or search for a specific function.

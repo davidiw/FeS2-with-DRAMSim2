@@ -1,0 +1,158 @@
+/* This file is part of SLICC (Specification Language for Implementing
+   Cache Coherence), a component of the Multifacet GEMS (General
+   Execution-driven Multiprocessor Simulator) software toolset
+   originally developed at the University of Wisconsin-Madison.
+
+   SLICC was originally developed by Milo Martin with substantial
+   contributions from Daniel Sorin.
+
+   Ruby was originally developed primarily by Milo Martin and Daniel
+   Sorin with contributions from Ross Dickson, Carl Mauer, and Manoj
+   Plakal.
+
+   Substantial further development of Multifacet GEMS at the
+   University of Wisconsin was performed by Alaa Alameldeen, Brad
+   Beckmann, Ross Dickson, Pacia Harper, Milo Martin, Michael Marty,
+   Carl Mauer, Kevin Moore, Manoj Plakal, Daniel Sorin, Min Xu, and
+   Luke Yen.
+
+   Additional development was performed at the University of
+   Pennsylvania by Milo Martin.
+
+   --------------------------------------------------------------------
+
+   Copyright (C) 1999-2005 by Mark D. Hill and David A. Wood for the
+   Wisconsin Multifacet Project.  Contact: gems@cs.wisc.edu
+   http://www.cs.wisc.edu/gems/
+
+   This file is based upon a pre-release version of Multifacet GEMS
+   from 2004 and may also contain additional modifications and code
+   Copyright (C) 2004-2007 by Milo Martin for the Penn Architecture
+   and Compilers Group.  Contact: acg@lists.seas.upenn.edu
+   http://www.cis.upenn.edu/acg/
+
+   --------------------------------------------------------------------
+
+   Multifacet GEMS is free software; you can redistribute it and/or
+   modify it under the terms of version 2 of the GNU General Public
+   License as published by the Free Software Foundation.  This 
+   software comes with ABSOLUTELY NO WARRANTY.  For details see the 
+   file LICENSE included with the distribution.
+*/
+// -----------------------------------------------------------------------------
+//
+//  This file is part of FeS2.
+//
+//  FeS2 is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  FeS2 is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with FeS2.  If not, see <http://www.gnu.org/licenses/>.
+//
+// -----------------------------------------------------------------------------
+
+// Declarations of various simulation parameters
+
+// ****The following two parameters are filled in at runtime****
+parameter(int NUM_NODES, 0, shorthand="n", desc="Number of nodes in the system");
+parameter(int NUM_NODES_BITS, 0, desc="log(NUM_NODES)");
+parameter(int TESTER_LENGTH, 0, shorthand="l", desc="Number of tester action/check pair to execute");
+parameter(int TRACE_WARMUP_LENGTH, 0, desc="When reading input trace, clear stats after this many cycles");
+
+parameter(int PERIODIC_STATS_INTERVAL, 0, desc="Interval to display periodic statistics");
+parameter(string PERIODIC_STATS_FILENAME, "", desc="Name of file to record periodic statistics");
+
+parameter(string RANDOM_SEED, "1", desc="Random seed of simulation");
+parameter(bool RANDOMIZATION, false, desc="Flag to randomly reorder and delay messages");
+
+// Maximum number of cycles a request is can be outstanding before the
+// Sequencer of StoreBuffer declares we're in deadlock/livelock
+parameter(Time DEADLOCK_THRESHOLD, int_to_Time(50000), desc="Cycles before aborting due to likely deadlock");
+
+parameter(bool SIMICS, true, desc="Set by simics if running in simics");
+
+parameter(bool SYNTHETIC_DRIVER, false, desc="Microbenchmark: Flag to enable the locking microbenchmark");
+parameter(int SYNTHETIC_LOCKS, 2048, desc="Microbenchmark: number of locks");
+parameter(int THINK_TIME, 5, desc="Microbenchmark: think time");
+parameter(int HOLD_TIME, 5, desc="Microbenchmark: hold time");
+parameter(int WAIT_TIME, 5, desc="Microbenchmark: time between tests while spinning");
+
+// For debugging purposes, one can enable a trace of all the protocol
+// state machine changes. Unfortunately, the code to generate the
+// trace is protocol specific. To use this you must set the debug
+// starting time to a value > 0.
+parameter(bool PROTOCOL_DEBUG_TRACE, false, desc="Enable the debugging list of transitions");
+
+// Debug parameters
+parameter(string DEBUG_FILTER, "none", desc="String for filtering debugging output (see Debug.def)");
+parameter(string DEBUG_VERBOSITY, "none", desc="Filters debugging messages based on verbosity (low, med, high)");
+parameter(Time DEBUG_START_TIME, int_to_Time(0), desc="Filters debugging messages based on a ruby time");
+
+// defines relative (integer) clock multipliers between ruby, opal, and simics
+parameter(int SIMICS_RUBY_MULTIPLIER, 2, desc="Simics cycles per ruby cycle");
+parameter(int OPAL_RUBY_MULTIPLIER, 2, desc="Simics cycles per opal cycle");
+
+parameter(bool USER_MODE_DATA_ONLY, false, desc="Ignore all requests except user-mode data requests");
+parameter(bool PROFILE_HOT_LINES, false, desc="Record histogram of most requested cache blocks");
+
+// PROFILE_ALL_INSTRUCTIONS is used if you want Ruby to profile all
+// instructions executed.  At one point this required setting
+// "instruction_profile_line_size" to 4 in the "sim" object of the
+// checkpoint.  However, this has not been tested in a really long
+// time, so I have no idea if this still works.
+parameter(bool PROFILE_ALL_INSTRUCTIONS, false, desc="Profile all instructions (warning: may not work)");
+parameter(bool PRINT_INSTRUCTION_TRACE, false, desc="Print an instruction trace (warning: may not work)");
+
+parameter(bool PERFECT_MEMORY_SYSTEM, false, desc="Make the entire memory system perfect");
+parameter(bool DATA_BLOCK, false, desc="Flag to reduce memory footprint by not storing data");
+
+// *********************************************
+// CACHE & MEMORY PARAMETERS
+// *********************************************
+
+parameter(int L1_CACHE_ASSOC, 4, desc="Associativity of L1 cache");
+parameter(int L1_CACHE_NUM_SETS_BITS, 8, desc="2^x sets in the L1 cache");
+parameter(int L2_CACHE_ASSOC, 4, desc="Associativity of L2 cache");
+parameter(int L2_CACHE_NUM_SETS_BITS, 16, desc="2^x sets in the L2 cache");
+
+parameter(int MEMORY_SIZE_BITS, 32, desc="2^x bytes in the physical memory"); // 4GB
+parameter(int DATA_BLOCK_BITS, 6, desc="2^x bytes in a cache block"); // 64B
+
+// TIMING PARAMETERS
+
+parameter(int NULL_LATENCY, 1, desc="Shortest possible latency");
+parameter(int ISSUE_LATENCY, 2, desc="Latency to send out a request to the interconnect");
+parameter(int CACHE_LATENCY, 12, desc="Latency to source data from a cache to the interconnect");
+parameter(int MEMORY_LATENCY, 80, desc="Latency to source data from a memory module to the interconnect");
+parameter(int DIRECTORY_LATENCY, 80, desc="Latency of directory lookup");
+parameter(int NETWORK_LINK_LATENCY, 14, desc="Latency for a single node-to-node hop in the interconnect");
+
+// Ruby cycles between when a sequencer issues a miss it arrives at
+// the cache controller for the node
+parameter(int SEQUENCER_TO_CONTROLLER_LATENCY, 4, desc="Latency added by sequencer to requests to cache controller");
+
+parameter(int TRANSITIONS_PER_RUBY_CYCLE, 32, desc="Maximum transitions per cycle for all SLICC state machines");
+parameter(int SEQUENCER_OUTSTANDING_REQUESTS, 16, desc="Number of outstanding requests per sequencer");
+parameter(int NUMBER_OF_TBES, 128, desc="TBEs available for demand misses, prefetches, and replacements");
+parameter(int INSTR_PREFETCH_NUM_LINES, 0, desc="Lines to sequentially prefetch on an instruction fetch miss");
+
+parameter(int TOKEN_REISSUE_THRESHOLD, 2, desc="TokenCoherence: reissued transient req. before persistent req.");
+parameter(DestPredType DESTSET_PREDICTOR, DestPredType:AlwaysBroadcast, desc="TokenCoherence: destination-set predictor configuration");
+parameter(int DESTSET_COARSE_BITS, 4, desc="TokenCoherence: destination-set predictor spatial coarseness level");
+parameter(int DESTSET_NUM_SETS, 2048, desc="TokenCoherence: destination-set predictor sets");
+parameter(int DESTSET_ASSOC, 4, desc="TokenCoherence: destination-set predictor associativity");
+parameter(double BASH_BANDWIDTH_ADAPTIVE_THRESHOLD, 0.75, desc="BASH: bandwidth-adaptive thresholds");
+
+// NETWORK PARAMETERS
+parameter(int LINK_BANDWIDTH, 1000000, desc="Network: base link bandwidth (in bytes per 1000 cycles)");
+parameter(bool ADAPTIVE_ROUTING, true, desc="Network: Flag to enable adaptive routing");
+parameter(int NUMBER_OF_VIRTUAL_NETWORKS, 4, desc="Network: Maximum number of virtual networks");
+parameter(TopologyType NETWORK_TOPOLOGY, TopologyType:HIERARCHICAL_SWITCH, desc="Network: select topology");
+parameter(int FAN_OUT_DEGREE, 4, desc="Network: Fan-out of tree-based HIERARCHICAL_SWITCH network");

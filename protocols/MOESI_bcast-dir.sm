@@ -1,0 +1,320 @@
+/* This file is part of SLICC (Specification Language for Implementing
+   Cache Coherence), a component of the Multifacet GEMS (General
+   Execution-driven Multiprocessor Simulator) software toolset
+   originally developed at the University of Wisconsin-Madison.
+
+   SLICC was originally developed by Milo Martin with substantial
+   contributions from Daniel Sorin.
+
+   Ruby was originally developed primarily by Milo Martin and Daniel
+   Sorin with contributions from Ross Dickson, Carl Mauer, and Manoj
+   Plakal.
+
+   Substantial further development of Multifacet GEMS at the
+   University of Wisconsin was performed by Alaa Alameldeen, Brad
+   Beckmann, Ross Dickson, Pacia Harper, Milo Martin, Michael Marty,
+   Carl Mauer, Kevin Moore, Manoj Plakal, Daniel Sorin, Min Xu, and
+   Luke Yen.
+
+   Additional development was performed at the University of
+   Pennsylvania by Milo Martin.
+
+   --------------------------------------------------------------------
+
+   Copyright (C) 1999-2005 by Mark D. Hill and David A. Wood for the
+   Wisconsin Multifacet Project.  Contact: gems@cs.wisc.edu
+   http://www.cs.wisc.edu/gems/
+
+   This file is based upon a pre-release version of Multifacet GEMS
+   from 2004 and may also contain additional modifications and code
+   Copyright (C) 2004-2007 by Milo Martin for the Penn Architecture
+   and Compilers Group.  Contact: acg@lists.seas.upenn.edu
+   http://www.cis.upenn.edu/acg/
+
+   --------------------------------------------------------------------
+
+   Multifacet GEMS is free software; you can redistribute it and/or
+   modify it under the terms of version 2 of the GNU General Public
+   License as published by the Free Software Foundation.  This 
+   software comes with ABSOLUTELY NO WARRANTY.  For details see the 
+   file LICENSE included with the distribution.
+*/
+// -----------------------------------------------------------------------------
+//
+//  This file is part of FeS2.
+//
+//  FeS2 is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  FeS2 is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with FeS2.  If not, see <http://www.gnu.org/licenses/>.
+//
+// -----------------------------------------------------------------------------
+
+machine(Directory, "MOSI Broadcast Optimized") {
+
+  enumeration(State, desc="Directory states", default="Directory_State_I") {
+    I,   "I",     desc="Idle (not responder)";
+    R,   "R",     desc="Responder";
+    NR,  "NR",    desc="Not Responder";
+    I_B, "I^B",   desc="Idle, blocked on a writeback";
+    R_B, "R^B",   desc="Responder, blocked on a writeback";
+    NR_B,"NR^B",  desc="Not Responder, blocked on a writeback";
+  }
+
+  // ** EVENTS **
+
+  enumeration(Event, desc="Directory events") {
+    // From Address network
+    GETS,                desc="A GETS arrives";
+    GETX,                desc="A GETX arrives";
+    PUT,                 desc="A PUT arrives";
+    WB_Clean,            desc="A clean writeback (no data)";
+    WB_Dirty,            desc="A dirty writeback (data)";
+    WB_Exclusive_Clean,  desc="A clean exclusive writeback (no data)";
+    WB_Exclusive_Dirty,  desc="A dirty exclusive writeback (data)";
+    WB_Nack,             desc="A writeback nack";
+  }
+
+  // TYPES
+  
+  // DirectoryEntry
+  structure(Entry, desc="...") {
+    State DirectoryState,          desc="Directory state";
+    DataBlock DataBlk,             desc="data for the block";
+  }  
+
+  external_type(DirectoryMemory) {
+    Entry lookup(Address);
+    bool isPresent(Address);
+  }
+
+  // ** OBJECTS **
+
+  DirectoryMemory directory;
+
+  State getState(Address addr) {
+    return directory[addr].DirectoryState;
+  }
+
+  void setState(Address addr, State state) {
+    if (directory.isPresent(addr)) {
+      directory[addr].DirectoryState := state;
+    }
+  } 
+
+  // ** BUFFERS **
+
+  MessageBuffer addressFromDir, network="To", virtual_network="0", ordered="false";
+  MessageBuffer dataFromDir, network="To", virtual_network="1", ordered="false";
+
+  MessageBuffer addressToDir, network="From", virtual_network="0", ordered="true";
+  MessageBuffer dataToDir, network="From", virtual_network="1", ordered="false";
+
+  // ** OUT_PORTS **
+
+  out_port(dataNetwork_out, DataMsg, dataFromDir);
+  out_port(addressNetwork_out, AddressMsg, addressFromDir);
+
+  // ** IN_PORTS **
+
+  // Request Network
+  in_port(addressNetwork_in, AddressMsg, addressToDir) {
+    if (addressNetwork_in.isReady()) {
+      peek(addressNetwork_in, AddressMsg) {
+        if (in_msg.Type == CoherenceRequestType:GETS) {
+          trigger(Event:GETS, in_msg.Address);
+        } else if (in_msg.Type == CoherenceRequestType:GETX) {
+          trigger(Event:GETX, in_msg.Address);
+        } else if (in_msg.Type == CoherenceRequestType:PUT) {
+          trigger(Event:PUT, in_msg.Address);
+        } else {
+          error("unexpected message");
+        }
+      }
+    }
+  }
+
+  // Response Network
+  in_port(dataNetwork_in, DataMsg, dataToDir) {
+    if (dataNetwork_in.isReady()) {
+      peek(dataNetwork_in, DataMsg) {
+        if (in_msg.Type == CoherenceResponseType:WB_CLEAN) {
+          trigger(Event:WB_Clean, in_msg.Address);
+        } else if (in_msg.Type == CoherenceResponseType:WB_DIRTY) {
+          trigger(Event:WB_Dirty, in_msg.Address);
+        } else if (in_msg.Type == CoherenceResponseType:WB_EXCLUSIVE_CLEAN) {
+          trigger(Event:WB_Exclusive_Clean, in_msg.Address);
+        } else if (in_msg.Type == CoherenceResponseType:WB_EXCLUSIVE_DIRTY) {
+          trigger(Event:WB_Exclusive_Dirty, in_msg.Address);
+        } else if (in_msg.Type == CoherenceResponseType:WB_NACK) {
+          trigger(Event:WB_Nack, in_msg.Address);
+        } else {
+          error("unexpected message");
+        }
+      }
+    }
+  }
+
+  // *** ACTIONS ***
+
+  action(a_sendAckMsg, "a", desc="Send ack message to requestor") {
+    peek(addressNetwork_in, AddressMsg) {
+      enqueue(dataNetwork_out, DataMsg, NULL_LATENCY) {
+        out_msg.Address := in_msg.Address;
+        out_msg.Type := CoherenceResponseType:WB_ACK;
+        out_msg.Sender := id;
+        out_msg.Destination.add(MachineType:L1Cache, in_msg.Requestor);
+        out_msg.MessageSize := MessageSizeType:Writeback_Control;
+      }
+    }
+  }
+
+  action(d_sendDataMsg, "d", desc="Send data message to requestor") {
+    peek(addressNetwork_in, AddressMsg) {
+      enqueue(dataNetwork_out, DataMsg, MEMORY_LATENCY) {
+        out_msg.Address := in_msg.Address;
+        out_msg.Type := CoherenceResponseType:DATA;
+        out_msg.Sender := id;
+        out_msg.Destination.add(MachineType:L1Cache, in_msg.Requestor);
+        out_msg.DataBlk := directory[in_msg.Address].DataBlk;
+        out_msg.Dirty := false; // By definition, the block is now clean
+        out_msg.MessageSize := MessageSizeType:Response_Data;
+        DEBUG_EXPR(in_msg.Requestor);
+        DEBUG_EXPR(out_msg.DataBlk);
+      }
+    }
+  }
+
+  action(e_sendDataExclusiveMsg, "e", desc="Send exclusive data message to requestor") {
+    peek(addressNetwork_in, AddressMsg) {
+      enqueue(dataNetwork_out, DataMsg, MEMORY_LATENCY) {
+        out_msg.Address := in_msg.Address;
+        out_msg.Type := CoherenceResponseType:EXCLUSIVE_DATA;
+        out_msg.Sender := id;
+        out_msg.Destination.add(MachineType:L1Cache, in_msg.Requestor);
+        out_msg.DataBlk := directory[in_msg.Address].DataBlk;
+        out_msg.Dirty := false; // By definition, the block is now clean
+        out_msg.MessageSize := MessageSizeType:Response_Data;
+        DEBUG_EXPR(in_msg.Requestor);
+        DEBUG_EXPR(out_msg.DataBlk);
+      }
+    }
+  }
+  
+  action(i_popDataQueue, "i", desc="Pop data queue.") {
+    dataNetwork_in.dequeue();
+  }
+
+  action(j_popAddressQueue, "j", desc="Pop address queue.") {
+    addressNetwork_in.dequeue();
+  }
+
+  action(r_writeDataFromResponse, "r", desc="Write response data to memory") {
+    peek(dataNetwork_in, DataMsg) {
+      assert(in_msg.Dirty);
+      assert(in_msg.MessageSize == MessageSizeType:Writeback_Data);
+      directory[in_msg.Address].DataBlk := in_msg.DataBlk;
+    }
+  }
+
+  action(s_checkDataFromResponse, "s", desc="Check response") {
+    peek(dataNetwork_in, DataMsg) {
+      assert(in_msg.Dirty == false);
+      assert(in_msg.MessageSize == MessageSizeType:Writeback_Control);
+
+      // NOTE: The following check would not be valid in a real
+      // implementation.  We include the data in the "dataless"
+      // message so we can assert the clean data matches the datablock
+      // in memory
+      assert(directory[in_msg.Address].DataBlk == in_msg.DataBlk);
+    }
+  }
+  
+  action(z_stall, "z", desc="Stall") {
+  }
+  
+  // TRANSITIONS
+
+  transition(I, PUT, R_B) {
+    a_sendAckMsg;
+    j_popAddressQueue;
+  }
+
+  transition(I, GETS, NR) {
+    e_sendDataExclusiveMsg;
+    j_popAddressQueue;
+  }
+
+  transition(I, GETX, NR) {
+    d_sendDataMsg;
+    j_popAddressQueue
+  }
+
+  transition(R, PUT, R_B) {
+    a_sendAckMsg;
+    j_popAddressQueue;
+  }
+
+  transition(R, GETS) {
+    d_sendDataMsg;
+    j_popAddressQueue;
+  }
+
+  transition(R, GETX, NR) {
+    d_sendDataMsg;
+    j_popAddressQueue
+  }
+
+  transition(NR, PUT, NR_B) {
+    a_sendAckMsg;
+    j_popAddressQueue;
+  }
+
+  transition(NR, {GETS, GETX}) {
+    j_popAddressQueue;
+  }
+
+  transition({I_B, R_B, NR_B}, {GETS, GETX, PUT}) {
+    z_stall;
+  }
+
+  transition(R_B, WB_Nack, R) {
+    i_popDataQueue;
+  }
+
+  transition(I_B, WB_Nack, I) {
+    i_popDataQueue;
+  }
+
+  transition(NR_B, WB_Dirty, R) {
+    r_writeDataFromResponse;
+    i_popDataQueue;
+  }
+
+  transition(NR_B, WB_Clean, R) {
+    s_checkDataFromResponse;
+    i_popDataQueue;
+  }
+
+  transition(NR_B, WB_Exclusive_Dirty, I) {
+    r_writeDataFromResponse;
+    i_popDataQueue;
+  }
+
+  transition(NR_B, WB_Exclusive_Clean, I) {
+    s_checkDataFromResponse;
+    i_popDataQueue;
+  }
+
+  transition(NR_B, WB_Nack, NR) {
+    i_popDataQueue;
+  }
+}

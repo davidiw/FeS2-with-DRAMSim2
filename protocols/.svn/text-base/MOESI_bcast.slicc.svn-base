@@ -1,0 +1,3 @@
+../protocols/MOESI_bcast-msg.sm
+../protocols/MOESI_bcast-cache.sm
+../protocols/MOESI_bcast-dir.sm
