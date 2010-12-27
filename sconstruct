@@ -3,16 +3,20 @@
 import glob, os, re
 from FeS2.global_variables import *
 
-protocol = 'MOESI_directory'
+protocol = 'MOESI_DRAM_directory'
+#protocol = 'MOESI_directory'
 
 includes = ['.', 'common', 'decoder', 'tools/include', 'autogen/include',
-            'pyrite', SIMICS_SYMLINK + '/src/include', 'generated/' + 'MOESI_directory', 'common/gzstream', 
+            'pyrite', SIMICS_SYMLINK + '/src/include', 'generated/' + protocol, 'common/gzstream', 
             'ruby/buffers', 'ruby/common', 'ruby/eventqueue', 'ruby/system', 
 	    'ruby/network', 'ruby/network/simple', 'ruby/mmpredictors', 'ruby/recorder', 'ruby/tester', 'ruby/profiler',
-            'external/inst_record']
+            'external/inst_record', '../DRAMSim2']
+
+library_paths = ['.', '../DRAMSim2']
+libraries = ['z', 'dramsim']
 
 env = Environment( CPPPATH=includes,
-		   LIBS=['z'], LIBPATH='.',
+		   LIBS=libraries, LIBPATH=library_paths,
                    PATH=os.environ['PATH'],
                    CCFLAGS='-fpic -msse -msse2',
                    LD_LIBRARY_PATH=os.getenv('LD_LIBRARY_PATH','') )
@@ -86,7 +90,8 @@ rubySources    = glob.glob( os.path.join("ruby/buffers","*.C") ) + \
 		 glob.glob( os.path.join("ruby/network/simple","*.C") ) + \
 		 glob.glob( os.path.join("ruby/profiler","*.C") ) + \
 		 glob.glob( os.path.join("ruby/recorder","*.C") ) + \
-		 glob.glob( os.path.join("ruby/system","*.C") ) 
+		 glob.glob( os.path.join("ruby/system","*.C") ) + \
+		 glob.glob( os.path.join("../DRAMSim2","*.cpp") ) 
 rubyTestSources= glob.glob( os.path.join("ruby/tester","*.C") ) 
 traceDumpSources=glob.glob( os.path.join("external/inst_record","*.cpp") )
 sliccSources   = glob.glob( os.path.join("slicc/ast", "*.C") ) + \

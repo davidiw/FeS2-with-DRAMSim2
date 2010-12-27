@@ -57,12 +57,27 @@
 
 #ifndef DIRECTORYMEMORY_H
 #define DIRECTORYMEMORY_H
+#define DRAMSIM 1
 
 #include "Global.h"
 #include "Directory_Entry.h"
+#include "MessageBuffer.h"
+#include "RequestMsg.h"
+#include "MachineType.h"
+#include "Network.h"
+#include <list>
+#include "MemorySystem.h"
+using namespace std;
+
+class Network; // network 
+class MessageBuffer;
 class Address;
 
+#if DRAMSIM
+class DirectoryMemory : public Consumer {
+#else
 class DirectoryMemory {
+#endif
 public:
   // Constructors
   DirectoryMemory(NodeID id);
@@ -79,6 +94,12 @@ public:
 
   static NodeID mapAddressToHomeNode(const Address& addr);
 
+#if DRAMSIM
+  void wakeup();
+  void read(const RequestMsg& inmsg);
+  void write(const RequestMsg& inmsg);
+#endif
+
 private:
   // Private Methods
   static integer_t memoryModuleIndex(const Address& addr);
@@ -88,11 +109,25 @@ private:
   DirectoryMemory(const DirectoryMemory& obj);
   DirectoryMemory& operator=(const DirectoryMemory& obj);
   
+#if DRAMSIM
+  void read_complete(uint id, uint64_t address, uint64_t clock_cycle);
+  void write_complete(uint id, uint64_t address, uint64_t clock_cycle);
+  void dram_complete(uint64_t address, bool write);
+  void dram_operation(const RequestMsg& inmsg, TransactionType ttype);
+#endif
+
   // Data Members (m_ prefix)
   Directory_Entry **m_entries;
   NodeID m_id;
   int m_memory_module_bits;
   int m_size;  // # of memory module blocks for this directory
+
+#if DRAMSIM
+  MemorySystem *m_mem;
+  list<RequestMsg> *m_pending_trans;
+  bool m_wakeup;
+  int m_mem_timer;
+#endif
 };
 
 // Output operator declaration

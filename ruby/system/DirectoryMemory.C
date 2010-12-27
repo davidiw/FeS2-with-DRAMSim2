@@ -74,7 +74,36 @@ DirectoryMemory::DirectoryMemory(NodeID id)
   for (int i=0; i < m_size; i++) {
     m_entries[i] = NULL;
   }
+
+#if DRAMSIM
+  m_mem_timer = g_param_ptr->SIMICS_RUBY_MULTIPLIER();
+  /* pick a DRAM part to simulate */
+  m_mem = new MemorySystem(0, "ram.ini", "system.ini", ".", "resultsfilename");
+
+  /* create and register our callback functions */
+  Callback_t *read_cb = new Callback<DirectoryMemory, void, uint, uint64_t, uint64_t>
+    (this, &DirectoryMemory::read_complete);
+  Callback_t *write_cb = new Callback<DirectoryMemory, void, uint, uint64_t, uint64_t>
+    (this, &DirectoryMemory::write_complete);
+  m_mem->RegisterCallbacks(read_cb, write_cb, NULL);
+
+  m_pending_trans = new list<RequestMsg>();
+  m_wakeup = true;
+  g_eventQueue_ptr->scheduleEvent(this, m_mem_timer);
+#endif
 }
+
+#if DRAMSIM
+void DirectoryMemory::wakeup()
+{
+  if(m_pending_trans->empty()) {
+    m_wakeup = false;
+    return;
+  }
+  g_eventQueue_ptr->scheduleEvent(this, m_mem_timer);
+  m_mem->update();
+}
+#endif
 
 DirectoryMemory::~DirectoryMemory()
 {
@@ -88,6 +117,11 @@ DirectoryMemory::~DirectoryMemory()
 
   // free up the array of directory entries
   delete[] m_entries;
+
+#if DRAMSIM
+  delete(m_pending_trans);
+  delete(m_mem);
+#endif
 }
 
 void DirectoryMemory::printConfig(ostream& out)
@@ -184,3 +218,62 @@ int DirectoryMemory::memoryModuleBits()
   return g_param_ptr->MEMORY_SIZE_BITS() - g_param_ptr->DATA_BLOCK_BITS() - g_param_ptr->NUM_NODES_BITS();
 }
 
+#if DRAMSIM
+void DirectoryMemory::read_complete(uint id, uint64_t address, uint64_t clock_cycle)
+{
+  dram_complete(address, false);
+}
+
+void DirectoryMemory::write_complete(uint id, uint64_t address, uint64_t clock_cycle)
+{
+  dram_complete(address, true);
+}
+
+void DirectoryMemory::dram_complete(uint64_t address, bool write)
+{
+  // Find the entry in the pending queue
+  list<RequestMsg>::iterator it;
+  RequestMsg msg;
+  for (it = m_pending_trans->begin(); it != m_pending_trans->end(); it++) {
+    msg = *it;
+    // FIXME: should check to make sure this is a read or a write
+    if(msg.getAddress().getAddress() == address) {
+      break;
+    }
+  }
+
+  // None exists...
+  if(it == m_pending_trans->end()) {
+    return;
+  }
+
+  // Found one, remove it and send notification to the Requestor
+  m_pending_trans->erase(it);
+  Network* net = g_system_ptr->getNetwork();
+  MessageBuffer* mb = net->getFromNetQueue(MachineType_Directory, msg.getRequestor(), false, 4);
+  mb->enqueue(msg, 1);
+}
+
+void DirectoryMemory::read(const RequestMsg& inmsg)
+{
+  dram_operation(inmsg, DATA_READ);
+}
+
+void DirectoryMemory::write(const RequestMsg& inmsg)
+{
+  dram_operation(inmsg, DATA_WRITE);
+}
+
+void DirectoryMemory::dram_operation(const RequestMsg& inmsg, TransactionType ttype)
+{
+  if(m_wakeup == false) {
+    m_wakeup = true;
+    g_eventQueue_ptr->scheduleEvent(this, m_mem_timer);
+  }
+
+  physical_address_t addr = inmsg.getAddress().getAddress();
+  Transaction tr = Transaction(ttype, addr, NULL);
+  m_mem->addTransaction(tr);
+  m_pending_trans->push_back(inmsg);
+}
+#endif

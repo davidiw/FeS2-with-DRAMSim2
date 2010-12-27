@@ -91,7 +91,8 @@ parameter(int WAIT_TIME, 5, desc="Microbenchmark: time between tests while spinn
 parameter(bool PROTOCOL_DEBUG_TRACE, false, desc="Enable the debugging list of transitions");
 
 // Debug parameters
-parameter(string DEBUG_FILTER, "none", desc="String for filtering debugging output (see Debug.def)");
+// parameter(string DEBUG_FILTER, "gsNqentlQTi", desc="String for filtering debugging output (see Debug.def)");
+parameter(string DEBUG_FILTER, "", desc="String for filtering debugging output (see Debug.def)");
 parameter(string DEBUG_VERBOSITY, "none", desc="Filters debugging messages based on verbosity (low, med, high)");
 parameter(Time DEBUG_START_TIME, int_to_Time(0), desc="Filters debugging messages based on a ruby time");
 
@@ -153,6 +154,6 @@ parameter(double BASH_BANDWIDTH_ADAPTIVE_THRESHOLD, 0.75, desc="BASH: bandwidth-
 // NETWORK PARAMETERS
 parameter(int LINK_BANDWIDTH, 1000000, desc="Network: base link bandwidth (in bytes per 1000 cycles)");
 parameter(bool ADAPTIVE_ROUTING, true, desc="Network: Flag to enable adaptive routing");
-parameter(int NUMBER_OF_VIRTUAL_NETWORKS, 4, desc="Network: Maximum number of virtual networks");
+parameter(int NUMBER_OF_VIRTUAL_NETWORKS, 5, desc="Network: Maximum number of virtual networks");
 parameter(TopologyType NETWORK_TOPOLOGY, TopologyType:HIERARCHICAL_SWITCH, desc="Network: select topology");
 parameter(int FAN_OUT_DEGREE, 4, desc="Network: Fan-out of tree-based HIERARCHICAL_SWITCH network");
