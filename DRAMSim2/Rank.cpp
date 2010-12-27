@@ -266,7 +266,8 @@ void Rank::receiveFromBus(BusPacket *packet)
 #else
 		// end of the line for the write packet
 #endif
-		delete(packet);
+//    This causes a double free ... maybe there is a bug in the code somewhere
+//		delete(packet);
 		break;
 	default:
 		ERROR("== Error - Unknown BusPacketType trying to be sent to Bank");
