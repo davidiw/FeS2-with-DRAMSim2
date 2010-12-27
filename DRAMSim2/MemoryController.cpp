@@ -33,6 +33,8 @@
 
 using namespace DRAMSim;
 
+int SHOW_SIM_OUTPUT = 0;
+
 MemoryController::MemoryController(MemorySystem *parent, std::ofstream *outfile) :
 		commandQueue (CommandQueue(bankStates)),
 		poppedBusPacket(NULL),
