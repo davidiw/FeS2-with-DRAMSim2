@@ -36,7 +36,7 @@ extern "C" {
 #include <sys/types.h>
 #include <ctype.h>
 #include <stdlib.h>
-  //#include <stdio.h> jld
+#include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
