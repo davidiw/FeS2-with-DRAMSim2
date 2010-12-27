@@ -10,9 +10,9 @@ includes = ['.', 'common', 'decoder', 'tools/include', 'autogen/include',
             'pyrite', SIMICS_SYMLINK + '/src/include', 'generated/' + protocol, 'common/gzstream', 
             'ruby/buffers', 'ruby/common', 'ruby/eventqueue', 'ruby/system', 
 	    'ruby/network', 'ruby/network/simple', 'ruby/mmpredictors', 'ruby/recorder', 'ruby/tester', 'ruby/profiler',
-            'external/inst_record', '../DRAMSim2']
+            'external/inst_record', 'DRAMSim2']
 
-library_paths = ['.', '../DRAMSim2']
+library_paths = ['.', 'DRAMSim2']
 libraries = ['z', 'dramsim']
 
 env = Environment( CPPPATH=includes,
@@ -91,7 +91,7 @@ rubySources    = glob.glob( os.path.join("ruby/buffers","*.C") ) + \
 		 glob.glob( os.path.join("ruby/profiler","*.C") ) + \
 		 glob.glob( os.path.join("ruby/recorder","*.C") ) + \
 		 glob.glob( os.path.join("ruby/system","*.C") ) + \
-		 glob.glob( os.path.join("../DRAMSim2","*.cpp") ) 
+		 glob.glob( os.path.join("DRAMSim2","*.cpp") ) 
 rubyTestSources= glob.glob( os.path.join("ruby/tester","*.C") ) 
 traceDumpSources=glob.glob( os.path.join("external/inst_record","*.cpp") )
 sliccSources   = glob.glob( os.path.join("slicc/ast", "*.C") ) + \
