@@ -13,7 +13,7 @@ includes = ['.', 'common', 'decoder', 'tools/include', 'autogen/include',
             'external/inst_record', 'DRAMSim2']
 
 library_paths = ['.', 'DRAMSim2']
-libraries = ['z', 'dramsim']
+libraries = ['z']
 
 env = Environment( CPPPATH=includes,
 		   LIBS=libraries, LIBPATH=library_paths,
