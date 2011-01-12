@@ -425,6 +425,7 @@ machine(Directory, "Directory protocol") {
   transition(S, Dram_ReadX, SM) {
     d_sendData;
     oo_setProfileSharing;
+    g_sendInvalidations;
     o_popDramQueue;
   }
 
@@ -436,7 +437,6 @@ machine(Directory, "Directory protocol") {
 
   transition(S, Dram_ReadS, SS) {
     d_sendData;
-    g_sendInvalidations;
     oo_setProfileSharing;
     o_popDramQueue;
   }
