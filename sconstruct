@@ -22,9 +22,9 @@ env = Environment( CPPPATH=includes,
                    LD_LIBRARY_PATH=os.getenv('LD_LIBRARY_PATH','') )
 
 if int(ARGUMENTS.get('debug', 0)):
-    env.Append(CCFLAGS=' -O0 -g -DRUBY_DEBUG=true')
+    env.Append(CCFLAGS=' -O0 -g -DRUBY_DEBUG=true -DNO_STORAGE')
 else:
-    env.Append(CCFLAGS=' -O3 -DRUBY_DEBUG=false')
+    env.Append(CCFLAGS=' -O3 -DRUBY_DEBUG=false -DNO_STORAGE')
 
 if int(ARGUMENTS.get('host32', 0)):
     env.Append(CCFLAGS=' -m32')
