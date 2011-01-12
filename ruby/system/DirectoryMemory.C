@@ -88,20 +88,20 @@ DirectoryMemory::DirectoryMemory(NodeID id)
   m_mem->RegisterCallbacks(read_cb, write_cb, NULL);
 
   m_pending_trans = new list<RequestMsg>();
-  m_wakeup = true;
-  g_eventQueue_ptr->scheduleEvent(this, m_mem_timer);
+  m_trans_queue = new queue<Transaction>();
+  m_wakeup = false;
 #endif
 }
 
 #if DRAMSIM
 void DirectoryMemory::wakeup()
 {
-  if(m_pending_trans->empty()) {
+  if(m_pending_trans->empty() && m_trans_queue->empty()) {
     m_wakeup = false;
     return;
   }
-  g_eventQueue_ptr->scheduleEvent(this, m_mem_timer);
   m_mem->update();
+  g_eventQueue_ptr->scheduleEvent(this, m_mem_timer);
 }
 #endif
 
@@ -242,8 +242,17 @@ void DirectoryMemory::dram_complete(uint64_t address, bool write)
     }
   }
 
-  // None exists...
+  // Check to see if there are any transactions pending
+  if(!m_trans_queue->empty()) {
+    Transaction tr = m_trans_queue->front();
+    if(m_mem->addTransaction(tr)) {
+      m_trans_queue->pop();
+    }
+  }
+
+  // Did we find a RequestMsg matching the transaction?
   if(it == m_pending_trans->end()) {
+    // No...
     return;
   }
 
@@ -273,7 +282,11 @@ void DirectoryMemory::dram_operation(const RequestMsg& inmsg, TransactionType tt
 
   physical_address_t addr = inmsg.getAddress().getAddress();
   Transaction tr = Transaction(ttype, addr, NULL);
-  m_mem->addTransaction(tr);
+  // transaction queue is full, we'll enqueue as soon as the next one returns
+  if(!m_mem->addTransaction(tr)) {
+    m_trans_queue->push(tr);
+  }
   m_pending_trans->push_back(inmsg);
+  dram_complete(addr, ttype == DATA_WRITE);
 }
 #endif

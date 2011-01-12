@@ -66,6 +66,7 @@
 #include "MachineType.h"
 #include "Network.h"
 #include <list>
+#include <queue>
 #include "MemorySystem.h"
 using namespace std;
 
@@ -125,6 +126,7 @@ private:
 #if DRAMSIM
   MemorySystem *m_mem;
   list<RequestMsg> *m_pending_trans;
+  queue<Transaction> *m_trans_queue;
   bool m_wakeup;
   int m_mem_timer;
 #endif
