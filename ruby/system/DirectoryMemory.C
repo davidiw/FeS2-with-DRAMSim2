@@ -259,7 +259,7 @@ void DirectoryMemory::dram_complete(uint64_t address, bool write)
   // Found one, remove it and send notification to the Requestor
   m_pending_trans->erase(it);
   Network* net = g_system_ptr->getNetwork();
-  MessageBuffer* mb = net->getFromNetQueue(MachineType_Directory, msg.getRequestor(), false, 4);
+  MessageBuffer* mb = net->getFromNetQueue(MachineType_Directory, m_id, false, 4);
   mb->enqueue(msg, 1);
 }
 
