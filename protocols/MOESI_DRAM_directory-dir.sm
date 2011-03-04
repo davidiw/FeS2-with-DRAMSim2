@@ -327,6 +327,23 @@ machine(Directory, "Directory protocol") {
     }
   }
 
+  action(gg_sendInvalidations, "\g", desc="Send invalidations to sharers, not including the requester") {
+    peek(dramQueue_in, RequestMsg) {
+      if ((directory[in_msg.Address].Sharers.count() > 1) || 
+          ((directory[in_msg.Address].Sharers.count() > 0) && (directory[in_msg.Address].Sharers.isElement(in_msg.Requestor) == false))) {
+        enqueue(forwardNetwork_out, RequestMsg, DIRECTORY_LATENCY) {
+          out_msg.Address := address;
+          out_msg.Type := CoherenceRequestType:INV;
+          out_msg.Requestor := in_msg.Requestor;
+          out_msg.Destination.addSet(MachineType:L1Cache, directory[in_msg.Address].Sharers);
+          out_msg.Destination.remove(MachineType:L1Cache, in_msg.Requestor);
+          out_msg.MessageSize := MessageSizeType:Forwarded_Control;
+        }
+      }
+    }
+  }
+
+
   action(i_popIncomingRequestQueue, "i", desc="Pop incoming request queue") {
     requestQueue_in.dequeue();
   }
@@ -425,7 +442,7 @@ machine(Directory, "Directory protocol") {
   transition(S, Dram_ReadX, SM) {
     d_sendData;
     oo_setProfileSharing;
-    g_sendInvalidations;
+    gg_sendInvalidations;
     o_popDramQueue;
   }
 
